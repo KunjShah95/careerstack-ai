@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+pydantic-settings
+python-dotenv
+PyMuPDF
+pdfplumber
+docx2txt
+sentence-transformers
+rapidfuzz
+httpx
+tenacity
+python-dateutil
+groq
+pytest
