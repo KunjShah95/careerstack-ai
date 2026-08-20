@@ -70,7 +70,7 @@ do date arithmetic.
 - Python 3.12, FastAPI, uvicorn
 - PyMuPDF (text + layout), pdfplumber (table detection), docx2txt
 - sentence-transformers all-MiniLM-L6-v2, CPU only, local
-- groq SDK (llama-3.3-70b-versatile), temperature=0
+- groq SDK (openai/gpt-oss-120b), temperature=0
 - rapidfuzz, httpx, tenacity, pydantic v2
 - Adzuna API for mining role profiles (country code "in" for India)
 
