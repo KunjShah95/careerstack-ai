@@ -81,6 +81,11 @@ def compute_ats_score(
             "sampled_at": role_profile.get("sampled_at"),
             "role": role_profile.get("role"),
             "location": role_profile.get("location"),
+            "sparse_profile": role_profile.get("sparse_profile"),
+            # None when cache.py's get_or_mine didn't need to fall back to
+            # a broader location; otherwise {"requested_location",
+            # "used_location", "requested_postings_sampled"}.
+            "location_fallback": role_profile.get("location_fallback"),
         },
     }
 

@@ -5,6 +5,7 @@ These feed format_compliance scoring later; no scoring happens here.
 """
 
 import io
+from pathlib import Path
 
 import fitz  # PyMuPDF
 import pdfplumber
@@ -12,6 +13,19 @@ import pdfplumber
 from app.services.extraction.text_extract import detect_multicolumn
 
 HEADER_FOOTER_MARGIN = 0.06  # top/bottom 6% of page height
+
+# Returned for non-PDF input: there's no PyMuPDF/pdfplumber-based layout
+# detection for DOCX in this codebase, so this is a signal-free default
+# rather than a guess. format_score already knows how to treat a None
+# page_count as "not applicable" for reasonable_length.
+_NO_SIGNALS_LAYOUT: dict = {
+    "has_images": False,
+    "has_tables": False,
+    "is_multicolumn": False,
+    "page_count": None,
+    "font_families": [],
+    "text_in_header_footer": False,
+}
 
 # A real table needs at least this many rows/columns; a single divider
 # rule under a section heading extracts as a 1x1 or 1xN "table" and isn't
@@ -117,3 +131,14 @@ def layout_signals(file_bytes: bytes) -> dict:
         "font_families": sorted(font_families),
         "text_in_header_footer": text_in_header_footer,
     }
+
+
+def get_layout_signals(file_bytes: bytes, filename: str) -> dict:
+    """Layout signals dispatched by file extension: layout_signals() for
+    PDF, a signal-free default for anything else. Lets callers (main.py)
+    get layout signals for whatever extract_text() just handled without
+    needing to branch on file type themselves.
+    """
+    if Path(filename).suffix.lower() == ".pdf":
+        return layout_signals(file_bytes)
+    return dict(_NO_SIGNALS_LAYOUT)
