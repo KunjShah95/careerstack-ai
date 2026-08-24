@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CareerStack AI — Resume Analysis</title>
+<style>
+  :root {
+    --ink: #0B3B2E;
+    --accent: #F43F5E;
+    --mint: #EEFBF4;
+    --surface: #FFFFFF;
+    --muted: #5B7C70;
+    --line: #DCEAE2;
+    /* Not part of the given palette: the brief needs a genuine
+       red / amber / green severity signal (score bands, missing-skill
+       urgency) that the six brand tokens above don't cover on their own.
+       Red and green reuse --accent and --ink, since both already carry
+       that connotation in the brand palette; --warn is the one real
+       addition, picked to sit quietly between the two rather than
+       compete with them. */
+    --warn: #C88A2E;
+    --warn-bg: #FBF1E2;
+    --warn-line: #E9C98A;
+    --red-bg: #FDEAEC;
+    --red-line: #F8B4C0;
+    --red-text: #9F1239;
+    --green-bg: #E7F6EE;
+    --green-line: #BFE3CE;
+
+    --shadow: 0 1px 3px rgba(11, 59, 46, .08);
+    --shadow-lg: 0 12px 28px rgba(11, 59, 46, .12);
+    --radius: 16px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: var(--mint);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  svg { display: block; }
+  button { font-family: inherit; }
+  p { margin: 0; }
+
+  .visually-hidden-input {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+
+  /* ---------- screens ---------- */
+  .screen { display: none; }
+  .screen.is-active { display: block; }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 32px;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-weight: 700; font-size: 15px;
+    transition: box-shadow 140ms ease, opacity 140ms ease, transform 140ms ease;
+  }
+  .btn-primary { background: var(--ink); color: #fff; padding: 14px 20px; }
+  .btn-primary:hover:not(:disabled) { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); padding: 12px 20px; }
+  .btn-secondary:hover { border-color: var(--ink); }
+
+  /* ---------- screen 1: upload ---------- */
+  .upload-shell {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 56px 24px;
+  }
+  .hero { text-align: center; max-width: 620px; margin-bottom: 36px; }
+  .hero h1 {
+    font-size: clamp(28px, 4.2vw, 42px); line-height: 1.15;
+    margin: 0 0 16px; letter-spacing: -0.015em;
+  }
+  .hero p { color: var(--muted); font-size: 17px; line-height: 1.55; }
+
+  .upload-card { width: 100%; max-width: 460px; }
+
+  .dropzone {
+    border: 2px dashed var(--line);
+    border-radius: 12px;
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--mint);
+    transition: border-color 160ms ease, background-color 160ms ease;
+  }
+  .dropzone:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .dropzone:hover { border-color: var(--muted); }
+  .dropzone.is-dragover { border-color: var(--accent); background: var(--red-bg); }
+  .dropzone.has-file { border-style: solid; border-color: var(--ink); }
+  .dropzone-icon { font-size: 26px; margin-bottom: 10px; }
+  .dropzone-text { font-weight: 700; margin-bottom: 4px; }
+  .dropzone-hint { color: var(--muted); font-size: 13px; }
+  .file-info { margin-top: 12px; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+
+  .field { margin-top: 20px; }
+  .field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .field input[type="text"] {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--mint);
+    font-size: 15px; color: var(--ink); font-family: inherit;
+  }
+  .field input:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+  .analyse-btn { width: 100%; margin-top: 26px; }
+
+  /* ---------- screen 2: analysing ---------- */
+  .analysing-shell {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 48px 24px;
+  }
+  .step-card { width: 100%; max-width: 460px; }
+  .step-card h2 { font-size: 19px; margin: 0 0 26px; text-align: center; }
+  .step-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 20px; }
+  .step-row { display: flex; align-items: center; gap: 14px; opacity: 0; transform: translateY(8px); }
+  .step-list.replay .step-row { animation: stepIn 420ms ease-out both; }
+  .step-list.replay .step-row:nth-child(1) { animation-delay: 0ms; }
+  .step-list.replay .step-row:nth-child(2) { animation-delay: 80ms; }
+  .step-list.replay .step-row:nth-child(3) { animation-delay: 160ms; }
+  .step-list.replay .step-row:nth-child(4) { animation-delay: 240ms; }
+  .step-list.replay .step-row:nth-child(5) { animation-delay: 320ms; }
+  @keyframes stepIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .step-dot {
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid var(--line); position: relative;
+    transition: border-color 200ms ease, background-color 200ms ease;
+  }
+  .step-row.is-active .step-dot {
+    border-color: var(--accent); background: var(--accent);
+    animation: pulseDot 1.1s ease-in-out infinite;
+  }
+  .step-row.is-done .step-dot { border-color: var(--ink); background: var(--ink); }
+  .step-row.is-done .step-dot::after {
+    content: ""; position: absolute; left: 6px; top: 3px;
+    width: 5px; height: 9px;
+    border-right: 2px solid #fff; border-bottom: 2px solid #fff;
+    transform: rotate(45deg);
+  }
+  @keyframes pulseDot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, .35); }
+    50% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0); }
+  }
+  .step-label { font-size: 15px; color: var(--muted); transition: color 200ms ease; }
+  .step-row.is-active .step-label, .step-row.is-done .step-label { color: var(--ink); font-weight: 600; }
+
+  /* ---------- screen 3: results ---------- */
+  .results-shell { max-width: 860px; margin: 0 auto; padding: 44px 24px 130px; }
+
+  .result-section { margin-bottom: 34px; opacity: 0; transform: translateY(10px); }
+  .results-shell.replay .result-section { animation: sectionIn 520ms ease-out both; }
+  @keyframes sectionIn { to { opacity: 1; transform: translateY(0); } }
+
+  .section-title {
+    font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--muted); margin: 0 0 16px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent); display: inline-block;
+  }
+
+  .degraded-banner {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); color: #7C4A03;
+    border-radius: 12px; padding: 14px 18px; font-size: 14px; line-height: 1.55;
+  }
+  .degraded-banner p + p { margin-top: 6px; }
+
+  .score-hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 6px 0 10px; }
+  .score-ring-wrap { position: relative; width: 168px; height: 168px; margin-bottom: 18px; }
+  .score-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-track { stroke: var(--line); stroke-width: 12; }
+  .ring-fill { stroke-width: 12; stroke-linecap: round; stroke-dasharray: 0 999; }
+  .ring-fill.band-red { stroke: var(--accent); }
+  .ring-fill.band-amber { stroke: var(--warn); }
+  .ring-fill.band-green { stroke: var(--ink); }
+  .score-overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .score-number { font-size: 42px; font-weight: 800; line-height: 1; }
+  .score-outof { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .band-pill {
+    display: inline-block; padding: 6px 18px; border-radius: 999px;
+    font-size: 13px; font-weight: 800; letter-spacing: .02em;
+    background: var(--mint); border: 1px solid var(--line);
+  }
+  .band-pill.band-red { background: var(--red-bg); color: var(--red-text); border-color: var(--red-line); }
+  .band-pill.band-amber { background: var(--warn-bg); color: #7C4A03; border-color: var(--warn-line); }
+  .band-pill.band-green { background: var(--green-bg); color: #0F6B41; border-color: var(--green-line); }
+
+  .subscore-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 560px) { .subscore-grid { grid-template-columns: 1fr; } }
+  .subscore-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+  .subscore-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; gap: 8px; }
+  .subscore-label { font-weight: 700; font-size: 14px; }
+  .subscore-weight { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .subscore-value { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+  .subscore-bar-track { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .subscore-bar-fill { height: 100%; width: 0; border-radius: 999px; background: var(--ink); transition: width 700ms ease-out; }
+
+  .chip-group { margin-bottom: 16px; }
+  .chip-group:last-child { margin-bottom: 0; }
+  .chip-group-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip-empty { color: var(--muted); font-size: 13px; font-style: italic; }
+  .chip {
+    display: inline-flex; align-items: center; padding: 7px 13px; border-radius: 999px;
+    font-size: 13px; font-weight: 700; opacity: 0; transform: scale(.85);
+    animation: chipIn 260ms ease-out both;
+  }
+  @keyframes chipIn { to { opacity: 1; transform: scale(1); } }
+  .chip-matched { background: var(--green-bg); color: #0F6B41; border: 1px solid var(--green-line); }
+  .chip-missing-high { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-line); }
+  .chip-missing-low { background: var(--warn-bg); color: #7C4A03; border: 1px solid var(--warn-line); }
+
+  .issue-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .issue-row:last-child { border-bottom: none; }
+  .issue-message { font-size: 14px; line-height: 1.5; }
+  .issue-penalty { font-size: 14px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+  .all-clear {
+    display: flex; align-items: center; gap: 8px; font-weight: 700;
+    background: var(--green-bg); border: 1px solid var(--green-line); color: #0F6B41;
+    padding: 14px 16px; border-radius: 12px; font-size: 14px;
+  }
+
+  .weak-evidence-intro { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0 0 14px; }
+  .weak-row { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .weak-row:last-child { border-bottom: none; }
+  .weak-quote { font-style: italic; font-size: 14.5px; line-height: 1.55; }
+
+  .action-plan-header { font-size: 15px; font-weight: 800; margin-bottom: 14px; }
+  .action-row {
+    display: flex; align-items: center; gap: 14px; padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    opacity: 0; transform: translateX(-6px); animation: actionIn 340ms ease-out both;
+  }
+  .action-row:last-child { border-bottom: none; }
+  @keyframes actionIn { to { opacity: 1; transform: translateX(0); } }
+  .action-rank {
+    width: 24px; height: 24px; border-radius: 50%; background: var(--mint);
+    border: 1px solid var(--line); font-size: 12px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .action-text { flex: 1; font-size: 14px; line-height: 1.5; }
+  .action-type { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .action-gain { font-size: 14px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+
+  .try-another-btn { display: block; margin: 8px auto 0; }
+
+  .results-footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: rgba(255, 255, 255, .94); backdrop-filter: blur(6px);
+    border-top: 1px solid var(--line);
+    padding: 12px 24px; text-align: center;
+    font-size: 12.5px; color: var(--muted); line-height: 1.55;
+  }
+  .results-footer strong { color: var(--ink); }
+
+  /* ---------- error screen ---------- */
+  .error-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
+  .error-card { max-width: 440px; text-align: center; }
+  .error-icon {
+    width: 46px; height: 46px; border-radius: 50%; background: var(--red-bg); color: var(--red-text);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800; margin: 0 auto 16px;
+  }
+  .error-card h2 { margin: 0 0 10px; font-size: 20px; }
+  .error-message { color: var(--muted); font-size: 14.5px; line-height: 1.55; margin: 0 0 26px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ SCREEN 1: UPLOAD ============ -->
+  <section class="screen is-active" id="screen-upload">
+    <div class="upload-shell">
+      <div class="hero">
+        <h1>Score your resume against the live job market</h1>
+        <p>We check keyword coverage, semantic fit, format compliance, and experience alignment — weighted the same way real ATS pipelines score a resume.</p>
+      </div>
+
+      <form class="card upload-card" id="uploadForm" novalidate>
+        <div class="dropzone" id="dropZone" tabindex="0" role="button" aria-label="Choose a resume file, or drag and drop one here">
+          <input type="file" id="fileInput" class="visually-hidden-input" accept=".pdf,.docx,.doc" />
+          <div class="dropzone-icon" aria-hidden="true">📄</div>
+          <div class="dropzone-text" id="dropzoneText">Drag and drop your resume here</div>
+          <div class="dropzone-hint" id="dropzoneHint">or click to browse · PDF or Word, under 5MB</div>
+          <div class="file-info" id="fileInfo"></div>
+        </div>
+
+        <div class="field">
+          <label for="roleInput">Target role</label>
+          <input type="text" id="roleInput" placeholder="Backend Developer" required />
+        </div>
+
+        <div class="field">
+          <label for="locationInput">Location</label>
+          <input type="text" id="locationInput" value="India" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary analyse-btn" id="analyseBtn" disabled>Analyse my resume</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 2: ANALYSING ============ -->
+  <section class="screen" id="screen-analysing">
+    <div class="analysing-shell">
+      <div class="card step-card">
+        <h2>Analysing your resume</h2>
+        <ul class="step-list" id="stepList">
+          <li class="step-row"><span class="step-dot"></span><span class="step-label">Reading your resume</span></li>
+          <li class="step-row"><span class="step-dot"></span><span class="step-label">Fetching live job postings</span></li>
+          <li class="step-row"><span class="step-dot"></span><span class="step-label">Building the role requirement profile</span></li>
+          <li class="step-row"><span class="step-dot"></span><span class="step-label">Scoring against the market</span></li>
+          <li class="step-row"><span class="step-dot"></span><span class="step-label">Preparing recommendations</span></li>
+        </ul>
+        <p class="visually-hidden-input" aria-live="polite" id="srStatus"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 3: RESULTS ============ -->
+  <section class="screen" id="screen-results">
+    <div class="results-shell" id="resultsShell">
+      <div class="degraded-banner result-section" id="degradedBanner" style="display:none;"></div>
+
+      <div class="result-section score-hero">
+        <div class="score-ring-wrap">
+          <svg class="score-svg" viewBox="0 0 140 140">
+            <circle class="ring-track" cx="70" cy="70" r="60" fill="none" />
+            <circle class="ring-fill" id="ringFill" cx="70" cy="70" r="60" fill="none" />
+          </svg>
+          <div class="score-overlay">
+            <div class="score-number" id="scoreNumber">0</div>
+            <div class="score-outof">/ 100</div>
+          </div>
+        </div>
+        <div class="band-pill" id="bandPill">—</div>
+      </div>
+
+      <div class="result-section">
+        <h2 class="section-title">Score breakdown</h2>
+        <div class="subscore-grid" id="subscoreGrid"></div>
+      </div>
+
+      <div class="result-section">
+        <h2 class="section-title">Skill coverage</h2>
+        <div class="chip-group">
+          <div class="chip-group-label">Matched</div>
+          <div class="chip-row" id="matchedChips"></div>
+        </div>
+        <div class="chip-group">
+          <div class="chip-group-label">Missing</div>
+          <div class="chip-row" id="missingChips"></div>
+        </div>
+      </div>
+
+      <div class="result-section">
+        <h2 class="section-title">Format &amp; parseability</h2>
+        <div id="formatIssues"></div>
+      </div>
+
+      <div class="result-section">
+        <h2 class="section-title">Weak evidence</h2>
+        <p class="weak-evidence-intro">These are real requirement sentences pulled from sampled job postings — the ones your resume currently shows the weakest evidence against.</p>
+        <div id="weakEvidenceList"></div>
+      </div>
+
+      <div class="result-section">
+        <h2 class="section-title">Action plan</h2>
+        <div class="action-plan-header" id="actionPlanHeader"></div>
+        <div id="actionPlanList"></div>
+      </div>
+
+      <button class="btn btn-secondary try-another-btn" id="tryAnotherBtn">Analyse another resume</button>
+    </div>
+
+    <div class="results-footer" id="resultsFooter"></div>
+  </section>
+
+  <!-- ============ ERROR SCREEN ============ -->
+  <section class="screen" id="screen-error">
+    <div class="error-shell">
+      <div class="card error-card">
+        <div class="error-icon" aria-hidden="true">!</div>
+        <h2>We couldn't analyse this resume</h2>
+        <p class="error-message" id="errorMessage"></p>
+        <button class="btn btn-primary" id="tryAgainBtn">Try another file</button>
+      </div>
+    </div>
+  </section>
+
+<script>
+(function () {
+  "use strict";
+
+  var REDUCE_MOTION = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var screens = {
+    upload: document.getElementById("screen-upload"),
+    analysing: document.getElementById("screen-analysing"),
+    results: document.getElementById("screen-results"),
+    error: document.getElementById("screen-error")
+  };
+
+  function showScreen(name) {
+    Object.keys(screens).forEach(function (key) {
+      screens[key].classList.toggle("is-active", key === name);
+    });
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  // ============ SCREEN 1: UPLOAD ============
+  var uploadForm = document.getElementById("uploadForm");
+  var dropZone = document.getElementById("dropZone");
+  var fileInput = document.getElementById("fileInput");
+  var dropzoneText = document.getElementById("dropzoneText");
+  var dropzoneHint = document.getElementById("dropzoneHint");
+  var fileInfo = document.getElementById("fileInfo");
+  var roleInput = document.getElementById("roleInput");
+  var locationInput = document.getElementById("locationInput");
+  var analyseBtn = document.getElementById("analyseBtn");
+
+  var selectedFile = null;
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function setFile(file) {
+    selectedFile = file || null;
+    if (selectedFile) {
+      dropZone.classList.add("has-file");
+      dropzoneText.textContent = "Ready to analyse";
+      dropzoneHint.style.display = "none";
+      fileInfo.textContent = selectedFile.name + " · " + formatSize(selectedFile.size);
+    } else {
+      dropZone.classList.remove("has-file");
+      dropzoneText.textContent = "Drag and drop your resume here";
+      dropzoneHint.style.display = "";
+      fileInfo.textContent = "";
+    }
+    analyseBtn.disabled = !selectedFile;
+  }
+
+  dropZone.addEventListener("click", function () { fileInput.click(); });
+  dropZone.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+  });
+  fileInput.addEventListener("change", function () { setFile(fileInput.files[0]); });
+
+  var dragCounter = 0;
+  dropZone.addEventListener("dragenter", function (e) {
+    e.preventDefault();
+    dragCounter++;
+    dropZone.classList.add("is-dragover");
+  });
+  dropZone.addEventListener("dragover", function (e) { e.preventDefault(); });
+  dropZone.addEventListener("dragleave", function (e) {
+    e.preventDefault();
+    dragCounter = Math.max(0, dragCounter - 1);
+    if (dragCounter === 0) dropZone.classList.remove("is-dragover");
+  });
+  dropZone.addEventListener("drop", function (e) {
+    e.preventDefault();
+    dragCounter = 0;
+    dropZone.classList.remove("is-dragover");
+    var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  uploadForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!selectedFile) return;
+    startAnalysis();
+  });
+
+  // ============ SCREEN 2: ANALYSING ============
+  var STEP_DURATIONS_MS = [500, 3200, 3200, 1400]; // rows 0-3; row 4 waits for the real response
+  var STEP_POLL_MS = 80;
+  var STEP_LABELS = [
+    "Reading your resume",
+    "Fetching live job postings",
+    "Building the role requirement profile",
+    "Scoring against the market",
+    "Preparing recommendations"
+  ];
+
+  function setStepState(row, state) {
+    row.classList.remove("is-active", "is-done");
+    if (state) row.classList.add(state);
+  }
+
+  function resetSteps() {
+    var list = document.getElementById("stepList");
+    var rows = Array.prototype.slice.call(list.querySelectorAll(".step-row"));
+    rows.forEach(function (row) { setStepState(row, null); });
+    list.classList.remove("replay");
+    void list.offsetWidth; // force reflow so the entrance animation replays
+    list.classList.add("replay");
+  }
+
+  // Advances the checklist on a timer while fetchPromise is in flight,
+  // fast-forwarding through any remaining nominal duration the moment the
+  // real response lands, and always holding the last row (waiting for
+  // recommendations) until settlement -- never marking it done early.
+  // Returns the resolved response data, or throws the rejection reason.
+  function runStepSequence(fetchPromise) {
+    var rows = Array.prototype.slice.call(document.getElementById("stepList").querySelectorAll(".step-row"));
+    var srStatus = document.getElementById("srStatus");
+    var settled = false;
+    var settleError = null;
+    var settleResult = null;
+
+    fetchPromise.then(
+      function (data) { settled = true; settleResult = data; },
+      function (err) { settled = true; settleError = err; }
+    );
+
+    function announce(i) { if (srStatus) srStatus.textContent = STEP_LABELS[i]; }
+
+    if (REDUCE_MOTION) {
+      // Skip the fake staged pacing entirely -- it's decorative timing,
+      // not real progress, and reduced-motion users shouldn't have to sit
+      // through several seconds of it. Jump straight to "waiting".
+      rows.forEach(function (row, i) {
+        setStepState(row, i < rows.length - 1 ? "is-done" : "is-active");
+      });
+      announce(rows.length - 1);
+      return waitThenFinish();
+    }
+
+    var chain = Promise.resolve();
+    rows.forEach(function (row, i) {
+      if (i === rows.length - 1) return; // last row handled after the loop
+      chain = chain.then(function () {
+        setStepState(row, "is-active");
+        announce(i);
+        var start = Date.now();
+        var duration = STEP_DURATIONS_MS[i];
+        function poll() {
+          if (settled || Date.now() - start >= duration) return Promise.resolve();
+          return sleep(STEP_POLL_MS).then(poll);
+        }
+        return poll();
+      }).then(function () {
+        setStepState(row, "is-done");
+      });
+    });
+
+    return chain.then(function () {
+      var lastRow = rows[rows.length - 1];
+      setStepState(lastRow, "is-active");
+      announce(rows.length - 1);
+      return waitThenFinish();
+    });
+
+    function waitThenFinish() {
+      function pollSettled() {
+        if (settled) return Promise.resolve();
+        return sleep(STEP_POLL_MS).then(pollSettled);
+      }
+      return pollSettled().then(function () {
+        if (settleError) throw settleError;
+        setStepState(rows[rows.length - 1], "is-done");
+        return sleep(REDUCE_MOTION ? 0 : 250).then(function () { return settleResult; });
+      });
+    }
+  }
+
+  // ============ FETCH ============
+  function requestAnalysis(file, role, location) {
+    var formData = new FormData();
+    formData.append("file", file);
+    formData.append("role", role);
+    formData.append("location", location);
+
+    return fetch("/api/analyze", { method: "POST", body: formData })
+      .catch(function () {
+        throw new Error("Could not reach the server. Check your connection and try again.");
+      })
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          if (!res.ok) {
+            throw new Error(data.detail || ("The server returned an error (" + res.status + ")."));
+          }
+          return data;
+        });
+      });
+  }
+
+  function startAnalysis() {
+    var role = roleInput.value.trim() || roleInput.placeholder;
+    var location = locationInput.value.trim() || "India";
+
+    showScreen("analysing");
+    resetSteps();
+
+    var fetchPromise = requestAnalysis(selectedFile, role, location);
+
+    runStepSequence(fetchPromise).then(function (data) {
+      renderResults(data);
+      showScreen("results");
+    }).catch(function (err) {
+      showError(err && err.message ? err.message : "Something went wrong while analysing your resume.");
+    });
+  }
+
+  // ============ SCREEN 3: RESULTS ============
+  var COMPONENT_ORDER = ["keyword", "semantic", "format", "experience"];
+  var COMPONENT_LABELS = {
+    keyword: "Keyword coverage",
+    semantic: "Semantic fit",
+    format: "Format compliance",
+    experience: "Experience alignment"
+  };
+
+  function bandTier(score) {
+    if (score < 40) return "red";
+    if (score < 60) return "amber";
+    return "green";
+  }
+
+  function playResultsEntrance() {
+    var shell = document.getElementById("resultsShell");
+    var sections = Array.prototype.slice.call(shell.querySelectorAll(".result-section"));
+    sections.forEach(function (el, i) { el.style.animationDelay = (i * 100) + "ms"; });
+    shell.classList.remove("replay");
+    void shell.offsetWidth;
+    shell.classList.add("replay");
+  }
+
+  function renderBanner(data) {
+    var el = document.getElementById("degradedBanner");
+    var messages = [];
+    if (data.degraded && data.degraded_message) messages.push(data.degraded_message);
+    var meta = data.role_profile_meta || {};
+    var fallback = meta.location_fallback;
+    if (fallback) {
+      messages.push(
+        "Only " + fallback.requested_postings_sampled + " postings found in " +
+        fallback.requested_location + " — showing " + fallback.used_location + " instead."
+      );
+    }
+    if (meta.sparse_profile) {
+      messages.push("The role profile used to score this resume was built from a smaller-than-usual sample of postings.");
+    }
+    if (messages.length === 0) {
+      el.style.display = "none";
+      el.innerHTML = "";
+      return;
+    }
+    el.style.display = "block";
+    el.innerHTML = messages.map(function (m) { return "<p>" + escapeHtml(m) + "</p>"; }).join("");
+  }
+
+  function renderScoreHero(score, band) {
+    var circle = document.getElementById("ringFill");
+    var numberEl = document.getElementById("scoreNumber");
+    var pill = document.getElementById("bandPill");
+    var r = 60;
+    var circumference = 2 * Math.PI * r;
+    var tier = bandTier(score);
+
+    circle.classList.remove("band-red", "band-amber", "band-green");
+    circle.classList.add("band-" + tier);
+    pill.classList.remove("band-red", "band-amber", "band-green");
+    pill.classList.add("band-" + tier);
+    pill.textContent = band;
+
+    if (REDUCE_MOTION) {
+      var dash = circumference * (score / 100);
+      circle.style.strokeDasharray = dash + " " + circumference;
+      numberEl.textContent = Math.round(score);
+      return;
+    }
+
+    var duration = 900;
+    var start = performance.now();
+    function ease(t) { return 1 - Math.pow(1 - t, 3); }
+    function frame(now) {
+      var t = Math.min(1, (now - start) / duration);
+      var eased = ease(t);
+      var value = score * eased;
+      circle.style.strokeDasharray = (circumference * (value / 100)) + " " + circumference;
+      numberEl.textContent = Math.round(value);
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        circle.style.strokeDasharray = (circumference * (score / 100)) + " " + circumference;
+        numberEl.textContent = Math.round(score);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function renderSubscores(subscores, weights) {
+    subscores = subscores || {};
+    weights = weights || {};
+    var grid = document.getElementById("subscoreGrid");
+    grid.innerHTML = "";
+    var fills = [];
+
+    COMPONENT_ORDER.forEach(function (key, i) {
+      var value = typeof subscores[key] === "number" ? subscores[key] : 0;
+      var weightPct = Math.round((weights[key] || 0) * 100);
+      var card = document.createElement("div");
+      card.className = "subscore-card";
+      card.innerHTML =
+        '<div class="subscore-top">' +
+          '<span class="subscore-label">' + escapeHtml(COMPONENT_LABELS[key]) + "</span>" +
+          '<span class="subscore-weight">' + weightPct + "% weight</span>" +
+        "</div>" +
+        '<div class="subscore-value">' + value.toFixed(1) + "</div>" +
+        '<div class="subscore-bar-track"><div class="subscore-bar-fill" id="bar-' + key + '"></div></div>';
+      grid.appendChild(card);
+      fills.push({ el: null, value: Math.max(0, Math.min(100, value)), index: i, key: key });
+    });
+
+    requestAnimationFrame(function () {
+      fills.forEach(function (item) {
+        var el = document.getElementById("bar-" + item.key);
+        var delay = REDUCE_MOTION ? 0 : item.index * 120;
+        setTimeout(function () { el.style.width = item.value + "%"; }, delay);
+      });
+    });
+  }
+
+  function renderSkillChips(keywordDetail, postingsSampled) {
+    keywordDetail = keywordDetail || {};
+    var matched = keywordDetail.matched || [];
+    var missing = keywordDetail.missing || [];
+    var matchedRow = document.getElementById("matchedChips");
+    var missingRow = document.getElementById("missingChips");
+    matchedRow.innerHTML = "";
+    missingRow.innerHTML = "";
+
+    var totalLabel = typeof postingsSampled === "number" ? postingsSampled : "?";
+
+    if (matched.length === 0) {
+      matchedRow.innerHTML = '<span class="chip-empty">No skills matched yet</span>';
+    } else {
+      matched.forEach(function (item, i) {
+        var chip = document.createElement("span");
+        chip.className = "chip chip-matched";
+        chip.style.animationDelay = (i * 30) + "ms";
+        chip.textContent = item.skill + " · " + item.count + " of " + totalLabel;
+        matchedRow.appendChild(chip);
+      });
+    }
+
+    if (missing.length === 0) {
+      missingRow.innerHTML = '<span class="chip-empty">No missing skills — full coverage</span>';
+    } else {
+      missing.forEach(function (item, i) {
+        var chip = document.createElement("span");
+        var tier = item.frequency >= 0.30 ? "chip-missing-high" : "chip-missing-low";
+        chip.className = "chip " + tier;
+        chip.style.animationDelay = (i * 30) + "ms";
+        chip.textContent = item.skill + " · " + item.count + " of " + totalLabel;
+        missingRow.appendChild(chip);
+      });
+    }
+  }
+
+  function renderFormatIssues(formatDetail) {
+    formatDetail = formatDetail || {};
+    var container = document.getElementById("formatIssues");
+    var issues = formatDetail.issues || [];
+    container.innerHTML = "";
+    if (issues.length === 0) {
+      container.innerHTML = '<div class="all-clear">✓ All 9 parseability checks passed</div>';
+      return;
+    }
+    issues.forEach(function (issue) {
+      var row = document.createElement("div");
+      row.className = "issue-row";
+      row.innerHTML =
+        '<span class="issue-message">' + escapeHtml(issue.message) + "</span>" +
+        '<span class="issue-penalty">−' + issue.penalty + " pts</span>";
+      container.appendChild(row);
+    });
+  }
+
+  function renderWeakEvidence(semanticDetail) {
+    semanticDetail = semanticDetail || {};
+    var container = document.getElementById("weakEvidenceList");
+    var items = semanticDetail.weakest_requirements || [];
+    container.innerHTML = "";
+    if (items.length === 0) {
+      container.innerHTML = '<p class="chip-empty">Not enough requirement data to evaluate this.</p>';
+      return;
+    }
+    items.forEach(function (item) {
+      var row = document.createElement("div");
+      row.className = "weak-row";
+      row.innerHTML = '<p class="weak-quote">“' + escapeHtml(item.requirement) + '”</p>';
+      container.appendChild(row);
+    });
+  }
+
+  function renderActionPlan(overallScore, actionPlan) {
+    actionPlan = actionPlan || {};
+    var items = actionPlan.items || [];
+    var header = document.getElementById("actionPlanHeader");
+    var projected = typeof actionPlan.projected_score_under_our_model === "number"
+      ? actionPlan.projected_score_under_our_model
+      : overallScore;
+    header.textContent = overallScore.toFixed(1) + " → " + projected.toFixed(1) + " projected";
+
+    var list = document.getElementById("actionPlanList");
+    list.innerHTML = "";
+    if (items.length === 0) {
+      list.innerHTML = '<p class="chip-empty">No further recommendations — this resume is in good shape.</p>';
+      return;
+    }
+    items.forEach(function (item, i) {
+      var row = document.createElement("div");
+      row.className = "action-row";
+      row.style.animationDelay = (i * 60) + "ms";
+      row.innerHTML =
+        '<span class="action-rank">' + item.rank + "</span>" +
+        '<span class="action-text">' + escapeHtml(item.action) +
+          '<span class="action-type">' + escapeHtml(item.type || "") + " · " + escapeHtml(item.effort || "") + " effort</span>" +
+        "</span>" +
+        '<span class="action-gain">+' + item.estimated_gain.toFixed(1) + "</span>";
+      list.appendChild(row);
+    });
+  }
+
+  function formatSampledDate(iso) {
+    if (!iso) return "recently";
+    var date = new Date(iso);
+    if (isNaN(date.getTime())) return iso;
+    return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function fmtWeight(w) { return typeof w === "number" ? w.toFixed(2) : "—"; }
+
+  function renderFooter(data) {
+    var meta = data.role_profile_meta || {};
+    var weights = data.weights || {};
+    var footer = document.getElementById("resultsFooter");
+    footer.innerHTML =
+      "<div>Based on <strong>" + (typeof meta.postings_sampled === "number" ? meta.postings_sampled : "—") +
+      "</strong> postings sampled " + escapeHtml(formatSampledDate(meta.sampled_at)) + ". Weights: keyword " +
+      fmtWeight(weights.keyword) + ", semantic " + fmtWeight(weights.semantic) + ", format " +
+      fmtWeight(weights.format) + ", experience " + fmtWeight(weights.experience) + ".</div>" +
+      "<div>Projected scores in the action plan are arithmetic under our own weighted model — not a guarantee of how any real ATS or recruiter will respond.</div>";
+  }
+
+  function renderResults(data) {
+    data = data || {};
+    renderBanner(data);
+    renderScoreHero(typeof data.overall_score === "number" ? data.overall_score : 0, data.band || "—");
+    renderSubscores(data.subscores, data.weights);
+    renderSkillChips(data.keyword_detail, data.role_profile_meta ? data.role_profile_meta.postings_sampled : null);
+    renderFormatIssues(data.format_detail);
+    renderWeakEvidence(data.semantic_detail);
+    renderActionPlan(typeof data.overall_score === "number" ? data.overall_score : 0, data.action_plan);
+    renderFooter(data);
+    playResultsEntrance();
+  }
+
+  // ============ ERROR SCREEN ============
+  function showError(message) {
+    document.getElementById("errorMessage").textContent = message;
+    showScreen("error");
+  }
+
+  document.getElementById("tryAgainBtn").addEventListener("click", function () {
+    setFile(null);
+    fileInput.value = "";
+    showScreen("upload");
+  });
+
+  document.getElementById("tryAnotherBtn").addEventListener("click", function () {
+    setFile(null);
+    fileInput.value = "";
+    showScreen("upload");
+  });
+
+  showScreen("upload");
+})();
+</script>
+</body>
+</html>

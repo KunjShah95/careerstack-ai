@@ -15,7 +15,15 @@ from pathlib import Path
 from app.models.resume import ContactInfo, Education, Experience, ParsedResume
 from app.services.extraction.layout import layout_signals
 from app.services.extraction.text_extract import extract_text
-from app.services.scoring.ats import WEIGHTS, build_action_plan, compute_ats_score
+from app.services.scoring.ats import (
+    WEIGHTS,
+    _CONTACT_CHECKS,
+    _FORMAT_PARSING_CHECKS,
+    _SECTION_STRUCTURE_CHECKS,
+    _format_group,
+    build_action_plan,
+    compute_ats_score,
+)
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
@@ -159,3 +167,43 @@ def test_projected_score_is_capped_at_one_hundred():
     result["overall_score"] = 99.9
     plan = build_action_plan(result)
     assert plan["projected_score_under_our_model"] <= 100.0
+
+
+def test_dimensions_have_six_named_entries_with_expected_shape():
+    result = _score_demo_before(["Python", "MySQL", "HTML", "CSS"])
+    dimensions = result["dimensions"]
+
+    assert [d["name"] for d in dimensions] == [
+        "Format & ATS Parsing",
+        "Section Structure",
+        "Contact & Personal Details",
+        "Skills & Keywords",
+        "Evidence & Relevance",
+        "Experience & Education",
+    ]
+    for dimension in dimensions:
+        assert set(dimension.keys()) == {"name", "score", "status", "note"}
+        assert 0.0 <= dimension["score"] <= 100.0
+        assert dimension["status"] in {"good", "fair", "weak"}
+        assert isinstance(dimension["note"], str) and dimension["note"]
+
+
+def test_format_dimensions_partition_points_earned_exactly():
+    """The three format-decomposed dimensions must never silently drift
+    from format_detail's own points_earned -- if a check ever gets added,
+    renamed, or miscategorised between the three groups, this catches it
+    rather than letting the dashboard quietly show numbers that don't add
+    up to the parent format score.
+    """
+    result = _score_demo_before(["Python", "MySQL", "HTML", "CSS"])
+    format_detail = result["format_detail"]
+
+    parsing = _format_group(format_detail, _FORMAT_PARSING_CHECKS)
+    structure = _format_group(format_detail, _SECTION_STRUCTURE_CHECKS)
+    contact = _format_group(format_detail, _CONTACT_CHECKS)
+
+    total_earned = parsing["earned"] + structure["earned"] + contact["earned"]
+    total_possible = parsing["possible"] + structure["possible"] + contact["possible"]
+
+    assert total_earned == format_detail["points_earned"]
+    assert total_possible == format_detail["points_possible"]
