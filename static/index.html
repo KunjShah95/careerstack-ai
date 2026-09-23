@@ -81,8 +81,13 @@
     display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
   }
   .wordmark { font-weight: 800; font-size: 17px; }
+  .wordmark[role="button"] { cursor: pointer; }
   .wordmark .accent { color: var(--indigo); }
   .nav-cta { padding: 10px 20px; font-size: 14px; }
+  .nav-right { display: flex; align-items: center; gap: 14px; }
+  .nav-user { display: flex; align-items: center; gap: 10px; }
+  .nav-user-email { font-size: 13.5px; color: var(--muted); font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav-signout { padding: 8px 16px; font-size: 13px; }
 
   /* ================= HERO ================= */
   .hero { display: flex; gap: 64px; align-items: center; max-width: 1120px; margin: 0 auto; padding: 88px 24px 96px; }
@@ -134,9 +139,23 @@
   .mini-bar-fill { height: 100%; border-radius: 999px; background: var(--indigo); }
 
   /* ================= UPLOAD SECTION ================= */
-  .upload-inner { max-width: 640px; margin: 0 auto; text-align: center; }
-  .upload-inner .section-heading { margin-bottom: 40px; }
   .upload-card { padding: 32px; text-align: left; }
+
+  /* ================= PAGE: UPLOAD ================= */
+  .upload-back-link { margin: 20px 0 0 32px; }
+  .upload-page-inner { max-width: 640px; margin: 0 auto; padding: 80px 24px 56px; text-align: center; }
+  .upload-page-heading { margin-bottom: 12px; }
+  .upload-page-subline { color: var(--muted); font-size: 15px; margin: 0 0 40px; }
+  .upload-steps-strip { background: var(--panel); border-top: 1px solid var(--line); padding: 28px 24px; }
+  .upload-steps-inner {
+    max-width: 640px; margin: 0 auto; display: flex; justify-content: center;
+    gap: 32px; flex-wrap: wrap;
+  }
+  .upload-step { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--muted); }
+  .upload-step-num {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--indigo-soft); color: var(--indigo);
+    font-size: 11.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
 
   .dropzone {
     border: 2px dashed var(--line); border-radius: 12px; padding: 36px 20px; text-align: center;
@@ -154,12 +173,50 @@
 
   .field { margin-top: 20px; }
   .field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
-  .field input[type="text"] {
-    width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line);
-    background: var(--panel); font-size: 15px; color: var(--ink); font-family: inherit;
+  /* Was scoped to input[type="text"] only -- email/password inputs never
+     matched, so they kept the browser's intrinsic ~20-character width
+     instead of filling the card (and the password-toggle icon, absolutely
+     positioned against the full-width wrapper, ended up floating well
+     past the visibly-narrow input). box-sizing: border-box so the 12/14px
+     padding doesn't push the input wider than its container. */
+  .field input {
+    width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--panel); font-size: 15px;
+    color: var(--ink); font-family: inherit;
   }
   .field input:focus { outline: 2px solid var(--indigo); outline-offset: 1px; }
   .analyse-btn { width: 100%; margin-top: 26px; padding: 14px 20px; font-size: 15px; }
+
+  /* ================= AUTH SCREEN ================= */
+  .auth-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 48px 24px; background: var(--panel); }
+  .auth-card { width: 100%; max-width: 420px; padding: 32px; text-align: left; }
+  .auth-tabs { display: flex; gap: 4px; background: var(--panel); border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+  .auth-tab { flex: 1; padding: 9px; border: none; background: none; border-radius: 8px; font-weight: 700; font-size: 14px; color: var(--muted); }
+  .auth-tab.active { background: var(--bg); color: var(--indigo); box-shadow: 0 1px 2px rgba(15, 23, 41, .08); }
+  .password-input-wrap { position: relative; }
+  .password-input-wrap input { padding-right: 44px; }
+  .password-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 8px; color: var(--muted); border-radius: 8px; display: flex; }
+  .password-toggle:hover { color: var(--indigo); }
+  .field-error { font-size: 12.5px; color: var(--red); margin-top: 5px; min-height: 0; }
+  .auth-error { background: #FEECEC; color: #B91C1C; border: 1px solid #F8B4C0; border-radius: 10px; padding: 11px 14px; font-size: 13.5px; margin-bottom: 16px; line-height: 1.5; }
+  /* registerPanel has twice the fields of loginPanel -- the natural
+     content height difference is what makes the tab switch obvious, no
+     forced min-height needed. */
+  .auth-panel:first-child { margin-top: 0; }
+
+  .auth-divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 18px; color: var(--muted); font-size: 12.5px; }
+  .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .auth-google-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 12px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel);
+    color: var(--muted); font-family: inherit; font-weight: 700; font-size: 14px;
+    cursor: not-allowed; opacity: .65;
+  }
+  .coming-soon-badge {
+    font-size: 10.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+    background: var(--line); color: var(--muted); padding: 3px 8px; border-radius: 999px; margin-left: 2px;
+  }
 
   /* ================= METHODOLOGY ================= */
   .methodology-intro {
@@ -244,6 +301,15 @@
   .sidebar-item:hover { background: var(--panel); color: var(--ink); }
   .sidebar-item.active { background: var(--indigo-soft); color: var(--indigo); box-shadow: inset 3px 0 0 var(--indigo); }
 
+  .sidebar-history-panel { margin: 2px 0 8px; max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  .history-row { display: block; width: 100%; text-align: left; padding: 10px 12px; border: none; background: none; border-bottom: 1px solid var(--line); font-family: inherit; }
+  .history-row:last-child { border-bottom: none; }
+  .history-row:hover { background: var(--indigo-soft); }
+  .history-fname { font-size: 12.5px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-meta { font-size: 11px; color: var(--muted); margin: 2px 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-pills { display: flex; gap: 6px; }
+  .history-pill { font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: var(--indigo-soft); color: var(--indigo); }
+  .history-empty, .history-loading { padding: 14px 12px; font-size: 12.5px; color: var(--muted); font-style: italic; }
   .sidebar-bottom-card { margin-top: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-size: 12.5px; }
   .sidebar-bottom-card .fname { font-weight: 700; color: var(--ink); word-break: break-word; margin-bottom: 4px; }
   .sidebar-bottom-card .role { color: var(--muted); }
@@ -258,6 +324,7 @@
   .degraded-banner { background: #FFF7E6; border: 1px solid #F3D68A; color: #8A5A00; border-radius: 12px; padding: 14px 18px; font-size: 14px; line-height: 1.55; margin-bottom: 24px; }
   .degraded-banner p + p { margin-top: 6px; }
 
+  .greeting-hi { font-size: 13.5px; font-weight: 700; color: var(--indigo); margin: 0 0 6px; }
   .greeting-title { font-size: 24px; font-weight: 800; margin: 0 0 6px; }
   .greeting-sub { font-size: 14px; color: var(--muted); }
 
@@ -370,6 +437,21 @@
   .chip-missing-high { background: #FEECEC; color: #C0392B; }
   .chip-missing-low { background: #FEF3DD; color: #92670A; }
 
+  /* Skill coverage's technical/professional split. Professional chips
+     reuse chip-matched/chip-missing-* for colour (chip--muted only
+     overrides weight) so a skill's matched/missing colour stays
+     consistent across both blocks -- just visually lighter here, so the
+     technical block reads as the primary one at a glance. */
+  .skill-category-block { margin-bottom: 22px; }
+  .skill-category-block:last-child { margin-bottom: 0; }
+  .skill-category-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .skill-category-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+  .skill-category-stats { font-size: 12.5px; color: var(--muted); font-weight: 700; }
+  .skill-category-block-muted .skill-category-title { color: var(--muted); }
+  .skill-category-empty { margin-top: 2px; }
+  .chip-row-compact { gap: 6px; }
+  .chip--muted { padding: 4px 10px; font-size: 11px; font-weight: 600; background: transparent; border: 1px solid currentColor; opacity: .78; }
+
   .issue-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
   .issue-row:last-child { border-bottom: none; }
   .issue-message { font-size: 13.5px; line-height: 1.5; }
@@ -384,6 +466,100 @@
   }
   @media (max-width: 700px) { .results-footer { left: 0; } }
   .results-footer strong { color: var(--ink); }
+
+  /* ============ JOB DISCOVERY ============ */
+  .disc-header-card { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 22px 24px; }
+  .disc-header-role { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+  .disc-header-city { color: var(--muted); font-size: 14px; margin-top: 3px; }
+  .disc-sample-meta { color: var(--muted); font-size: 13px; margin-top: 10px; line-height: 1.55; }
+  .disc-widened-banner {
+    display: flex; gap: 11px; align-items: flex-start;
+    background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px;
+    padding: 13px 16px; margin-bottom: 18px; font-size: 13.5px; line-height: 1.55; color: #78350F;
+  }
+  .disc-widened-banner .disc-banner-icon { color: var(--amber); flex-shrink: 0; font-weight: 700; }
+
+  .disc-filters {
+    display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center;
+    padding: 14px 18px; border: 1px solid var(--line); border-radius: 12px;
+    background: #FBFCFE; margin-bottom: 18px;
+  }
+  .disc-filter { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink); }
+  .disc-filter label { color: var(--muted); font-weight: 600; font-size: 12.5px; letter-spacing: 0.02em; text-transform: uppercase; }
+  .disc-filter select, .disc-filter input[type="range"] { font: inherit; }
+  .disc-filter select {
+    border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px;
+    background: var(--bg); color: var(--ink);
+  }
+  .disc-filter-check { display: flex; align-items: center; gap: 7px; cursor: pointer; font-weight: 600; }
+  .disc-filter-value { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 34px; }
+  .disc-filter-count { margin-left: auto; color: var(--muted); font-size: 13px; }
+
+  .disc-job-card { padding: 18px 20px; margin-bottom: 12px; }
+  .disc-job-top { display: flex; align-items: flex-start; gap: 14px; }
+  .disc-match-badge {
+    flex-shrink: 0; width: 54px; height: 54px; border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .disc-match-badge .disc-match-unit { font-size: 10px; font-weight: 600; opacity: 0.75; margin-top: 2px; }
+  .disc-band-strong { background: #ECFDF5; color: #047857; }
+  .disc-band-good   { background: var(--indigo-soft); color: var(--indigo); }
+  .disc-band-fair   { background: #FFFBEB; color: #B45309; }
+  .disc-band-weak   { background: #F4F5F8; color: var(--muted); }
+  .disc-job-title { font-size: 15.5px; font-weight: 700; line-height: 1.35; }
+  .disc-job-sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+  .disc-job-sub .disc-dot { opacity: 0.5; margin: 0 6px; }
+  .disc-lowconf-tag {
+    display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+    background: #FFFBEB; border: 1px solid #FDE68A; color: #B45309;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.01em; vertical-align: 1px;
+  }
+  .disc-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+  .disc-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid transparent;
+  }
+  .disc-chip-matched { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
+  .disc-chip-missing { background: #FFFBEB; color: #B45309; border-color: #FDE68A; }
+  .disc-job-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .disc-salary { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .disc-attribution { font-size: 12px; color: var(--muted); }
+  .disc-job-actions { margin-left: auto; display: flex; gap: 8px; }
+  .disc-btn-sm { padding: 6px 13px; font-size: 13px; border-radius: 8px; }
+
+  .disc-empty { text-align: center; padding: 46px 24px; }
+  .disc-empty-title { font-size: 16px; font-weight: 700; margin-bottom: 7px; }
+  .disc-empty-sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .disc-empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .disc-detail-backdrop {
+    position: fixed; inset: 0; background: rgba(15, 23, 41, 0.42);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 40px 20px; overflow-y: auto; z-index: 60;
+  }
+  .disc-detail-panel { background: var(--bg); border-radius: 16px; max-width: 620px; width: 100%; padding: 26px 28px; }
+  .disc-detail-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 4px; }
+  .disc-detail-close { margin-left: auto; background: none; border: none; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; padding: 0 4px; }
+  .disc-detail-close:hover { color: var(--ink); }
+  .disc-detail-section { margin-top: 20px; }
+  .disc-detail-section h4 { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 0 0 9px; }
+  .disc-breakdown-row { display: flex; align-items: center; gap: 12px; font-size: 13.5px; padding: 5px 0; }
+  .disc-breakdown-label { width: 150px; color: var(--muted); }
+  .disc-breakdown-bar { flex: 1; height: 7px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .disc-breakdown-fill { height: 100%; background: var(--indigo); border-radius: 999px; }
+  .disc-breakdown-value { width: 46px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .disc-detail-desc { font-size: 13.5px; line-height: 1.6; color: var(--ink); white-space: pre-wrap; }
+  .disc-truncation-note {
+    margin-top: 12px; font-size: 12.5px; color: #78350F; line-height: 1.55;
+    background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px; padding: 10px 13px;
+  }
+
+  @media (max-width: 720px) {
+    .disc-filters { gap: 12px 14px; }
+    .disc-filter-count { margin-left: 0; width: 100%; }
+    .disc-job-actions { margin-left: 0; width: 100%; }
+  }
 </style>
 </head>
 <body>
@@ -395,7 +571,13 @@
 
     <nav class="nav">
       <div class="wordmark">CareerStack<span class="accent">AI</span></div>
-      <button class="btn btn-indigo btn-pill nav-cta" id="navCta">Analyse my resume</button>
+      <div class="nav-right">
+        <div class="nav-user" id="navUser" style="display:none;">
+          <span class="nav-user-email" id="navUserEmail"></span>
+          <button type="button" class="btn btn-ghost btn-pill nav-signout" id="signOutBtn">Sign out</button>
+        </div>
+        <button class="btn btn-indigo btn-pill nav-cta" id="navCta">Analyse my resume</button>
+      </div>
     </nav>
 
     <div class="hero">
@@ -459,30 +641,6 @@
       </div>
     </div>
 
-    <section class="section section-wash" id="uploadSection">
-      <div class="upload-inner">
-        <h2 class="section-heading">Upload your resume</h2>
-        <form class="card upload-card" id="uploadForm" novalidate>
-          <div class="dropzone" id="dropZone" tabindex="0" role="button" aria-label="Choose a resume file, or drag and drop one here">
-            <input type="file" id="fileInput" class="visually-hidden-input" accept=".pdf,.docx,.doc" />
-            <div class="dropzone-icon" aria-hidden="true">📄</div>
-            <div class="dropzone-text" id="dropzoneText">Drag and drop your resume here</div>
-            <div class="dropzone-hint" id="dropzoneHint">or click to browse · PDF or Word, under 5MB</div>
-            <div class="file-info" id="fileInfo"></div>
-          </div>
-          <div class="field">
-            <label for="roleInput">Target role</label>
-            <input type="text" id="roleInput" placeholder="Backend Developer" required />
-          </div>
-          <div class="field">
-            <label for="locationInput">Location</label>
-            <input type="text" id="locationInput" value="India" required />
-          </div>
-          <button type="submit" class="btn btn-indigo analyse-btn" id="analyseBtn" disabled>Analyse my resume</button>
-        </form>
-      </div>
-    </section>
-
     <section class="section" id="methodologySection">
       <div class="section-inner">
         <h2 class="section-heading">How the score is calculated</h2>
@@ -541,6 +699,152 @@
     </section>
 
     <footer class="landing-footer">CareerStack AI · Software Group Project 2026</footer>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- PAGE: UPLOAD                                                       -->
+  <!-- ================================================================= -->
+  <div id="page-upload" style="display:none;">
+
+    <nav class="nav">
+      <div class="wordmark" id="uploadWordmark" role="button" tabindex="0">CareerStack<span class="accent">AI</span></div>
+      <div class="nav-right">
+        <div class="nav-user" id="uploadNavUser" style="display:none;">
+          <span class="nav-user-email" id="uploadNavUserEmail"></span>
+          <button type="button" class="btn btn-ghost btn-pill nav-signout" id="uploadSignOutBtn">Sign out</button>
+        </div>
+        <button class="btn btn-indigo btn-pill nav-cta" id="uploadNavCta">Analyse my resume</button>
+      </div>
+    </nav>
+
+    <button type="button" class="transition-back-link upload-back-link" id="uploadBackLink">← Back</button>
+
+    <div class="upload-page-inner">
+      <h1 class="section-heading upload-page-heading">Upload your resume</h1>
+      <p class="upload-page-subline">We'll score it against live postings for your target role.</p>
+
+      <form class="card upload-card" id="uploadForm" novalidate>
+        <div class="dropzone" id="dropZone" tabindex="0" role="button" aria-label="Choose a resume file, or drag and drop one here">
+          <input type="file" id="fileInput" class="visually-hidden-input" accept=".pdf,.docx,.doc" />
+          <div class="dropzone-icon" aria-hidden="true">📄</div>
+          <div class="dropzone-text" id="dropzoneText">Drag and drop your resume here</div>
+          <div class="dropzone-hint" id="dropzoneHint">or click to browse · PDF or Word, under 5MB</div>
+          <div class="file-info" id="fileInfo"></div>
+        </div>
+        <div class="field">
+          <label for="roleInput">Target role</label>
+          <input type="text" id="roleInput" placeholder="Backend Developer" required />
+        </div>
+        <div class="field">
+          <label for="locationInput">Location</label>
+          <input type="text" id="locationInput" value="India" required />
+        </div>
+        <button type="submit" class="btn btn-indigo analyse-btn" id="analyseBtn" disabled>Analyse my resume</button>
+      </form>
+    </div>
+
+    <div class="upload-steps-strip">
+      <div class="upload-steps-inner">
+        <div class="upload-step"><span class="upload-step-num">1</span> Upload</div>
+        <div class="upload-step"><span class="upload-step-num">2</span> We sample live postings</div>
+        <div class="upload-step"><span class="upload-step-num">3</span> See your score</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- PAGE: AUTH                                                         -->
+  <!-- ================================================================= -->
+  <div id="page-auth" style="display:none;">
+    <div class="auth-shell">
+      <div class="card auth-card">
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" id="authTabSignIn">Sign in</button>
+          <button type="button" class="auth-tab" id="authTabSignUp">Create account</button>
+        </div>
+
+        <form id="authForm" novalidate>
+          <!-- Sign in: email, password. -->
+          <div id="loginPanel" class="auth-panel">
+            <div class="field">
+              <label for="loginEmail">Email</label>
+              <input type="email" id="loginEmail" autocomplete="email" required />
+              <div class="field-error" id="loginEmailError"></div>
+            </div>
+            <div class="field">
+              <label for="loginPassword">Password</label>
+              <div class="password-input-wrap">
+                <input type="password" id="loginPassword" autocomplete="current-password" required />
+                <button type="button" class="password-toggle" data-input="loginPassword" aria-label="Show password">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M1.5 9S4.5 3.5 9 3.5 16.5 9 16.5 9 13.5 14.5 9 14.5 1.5 9 1.5 9Z" stroke="currentColor" stroke-width="1.3"/><circle cx="9" cy="9" r="2.4" stroke="currentColor" stroke-width="1.3"/></svg>
+                </button>
+              </div>
+              <div class="field-error" id="loginPasswordError"></div>
+            </div>
+          </div>
+
+          <!-- Create account: name, email, password, confirm password --
+               deliberately more fields / taller than the sign-in panel,
+               so the tab switch is visually obvious, not just a label
+               change. -->
+          <div id="registerPanel" class="auth-panel" style="display:none;">
+            <div class="field">
+              <label for="registerName">Full name</label>
+              <input type="text" id="registerName" autocomplete="name" placeholder="Krish Patel" required minlength="2" maxlength="60" />
+              <div class="field-error" id="registerNameError"></div>
+            </div>
+            <div class="field">
+              <label for="registerEmail">Email</label>
+              <input type="email" id="registerEmail" autocomplete="email" required />
+              <div class="field-error" id="registerEmailError"></div>
+            </div>
+            <div class="field">
+              <label for="registerPassword">Password</label>
+              <div class="password-input-wrap">
+                <input type="password" id="registerPassword" autocomplete="new-password" required minlength="8" />
+                <button type="button" class="password-toggle" data-input="registerPassword" aria-label="Show password">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M1.5 9S4.5 3.5 9 3.5 16.5 9 16.5 9 13.5 14.5 9 14.5 1.5 9 1.5 9Z" stroke="currentColor" stroke-width="1.3"/><circle cx="9" cy="9" r="2.4" stroke="currentColor" stroke-width="1.3"/></svg>
+                </button>
+              </div>
+              <div class="field-error" id="registerPasswordError"></div>
+            </div>
+            <div class="field">
+              <label for="registerConfirmPassword">Confirm password</label>
+              <div class="password-input-wrap">
+                <input type="password" id="registerConfirmPassword" autocomplete="new-password" required />
+                <button type="button" class="password-toggle" data-input="registerConfirmPassword" aria-label="Show password">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M1.5 9S4.5 3.5 9 3.5 16.5 9 16.5 9 13.5 14.5 9 14.5 1.5 9 1.5 9Z" stroke="currentColor" stroke-width="1.3"/><circle cx="9" cy="9" r="2.4" stroke="currentColor" stroke-width="1.3"/></svg>
+                </button>
+              </div>
+              <div class="field-error" id="registerConfirmPasswordError"></div>
+            </div>
+          </div>
+
+          <div class="auth-error" id="authError" style="display:none;"></div>
+
+          <button type="submit" class="btn btn-indigo analyse-btn" id="authSubmitBtn">Sign in</button>
+        </form>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <!-- Visual placeholder only -- not implemented. disabled means it
+             can't be clicked or submit anything, so there's no event
+             handler at all and no way for it to make a network request. -->
+        <button
+          type="button"
+          class="auth-google-btn"
+          disabled
+          title="Sign in with Google isn't available yet -- OAuth support is planned."
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.3" />
+            <text x="9" y="12.5" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor">G</text>
+          </svg>
+          Continue with Google
+          <span class="coming-soon-badge">Coming soon</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- ================================================================= -->
@@ -606,8 +910,19 @@
         Improvements
       </button>
 
+      <div class="sidebar-group-label">Jobs</div>
+      <button class="sidebar-item" id="findJobsSidebarBtn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4.5" width="12" height="9.5" rx="1.3" stroke="currentColor" stroke-width="1.4"/><path d="M5.6 4.4V3.2c0-.66.54-1.2 1.2-1.2h2.4c.66 0 1.2.54 1.2 1.2v1.2" stroke="currentColor" stroke-width="1.4"/></svg>
+        Find Matching Jobs
+      </button>
+
       <div class="sidebar-group-label">About</div>
       <button class="sidebar-item" id="howScoringWorksLink">How Scoring Works</button>
+      <button class="sidebar-item" id="historyToggle">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.5V8L10.5 9.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        History
+      </button>
+      <div class="sidebar-history-panel" id="historyPanel" style="display:none;"></div>
       <button class="sidebar-item" id="newAnalysisLink">New Analysis</button>
 
       <div class="sidebar-bottom-card">
@@ -621,6 +936,7 @@
         <div class="degraded-banner result-section" id="degradedBanner" style="display:none;"></div>
 
         <div class="result-section" id="overviewSection">
+          <div class="greeting-hi" id="greetingHi" style="display:none;"></div>
           <div class="greeting-title">Your resume analysis</div>
           <div class="greeting-sub" id="greetingSub"></div>
 
@@ -682,18 +998,53 @@
           <div class="section-heading-row"><h2>Suggested improvements</h2><span class="count-badge" id="improvementsCount">0 found</span></div>
           <div class="improvements-header" id="improvementsHeader"></div>
           <div id="improvementsList"></div>
+          <div class="card" id="findJobsCta" style="margin-top:16px; padding:20px 22px; display:flex; flex-wrap:wrap; align-items:center; gap:14px;">
+            <div style="flex:1; min-width:240px;">
+              <div style="font-weight:700; font-size:15px;">See who's hiring for this role</div>
+              <div style="color:var(--muted); font-size:13.5px; margin-top:3px;">Live postings, ranked against the resume you just analysed.</div>
+            </div>
+            <button class="btn btn-indigo" id="findJobsPlanBtn">Find matching jobs</button>
+          </div>
         </div>
 
         <div class="result-section results-two-col">
           <div class="panel card" id="skillCoverageSection">
             <div class="section-heading-row" style="margin-top:0;"><h2>Skill coverage</h2></div>
-            <div class="chip-group">
-              <div class="chip-group-label">Matched</div>
-              <div class="chip-row" id="matchedChips"></div>
+
+            <div class="skill-category-block" id="technicalSkillBlock">
+              <div class="skill-category-heading">
+                <span class="skill-category-title">Technical skills</span>
+                <span class="skill-category-stats" id="technicalSkillStats"></span>
+              </div>
+              <div id="technicalSkillChips">
+                <div class="chip-group">
+                  <div class="chip-group-label">Matched</div>
+                  <div class="chip-row" id="technicalSkillMatchedChips"></div>
+                </div>
+                <div class="chip-group">
+                  <div class="chip-group-label">Missing</div>
+                  <div class="chip-row" id="technicalSkillMissingChips"></div>
+                </div>
+              </div>
+              <div class="chip-empty skill-category-empty" id="technicalSkillEmpty" hidden></div>
             </div>
-            <div class="chip-group">
-              <div class="chip-group-label">Missing</div>
-              <div class="chip-row" id="missingChips"></div>
+
+            <div class="skill-category-block skill-category-block-muted" id="professionalSkillBlock">
+              <div class="skill-category-heading">
+                <span class="skill-category-title">Professional skills</span>
+                <span class="skill-category-stats" id="professionalSkillStats"></span>
+              </div>
+              <div id="professionalSkillChips">
+                <div class="chip-group">
+                  <div class="chip-group-label">Matched</div>
+                  <div class="chip-row chip-row-compact" id="professionalSkillMatchedChips"></div>
+                </div>
+                <div class="chip-group">
+                  <div class="chip-group-label">Missing</div>
+                  <div class="chip-row chip-row-compact" id="professionalSkillMissingChips"></div>
+                </div>
+              </div>
+              <div class="chip-empty skill-category-empty" id="professionalSkillEmpty" hidden></div>
             </div>
           </div>
           <div class="panel card" id="formatSection">
@@ -705,6 +1056,120 @@
     </main>
 
     <div class="results-footer" id="resultsFooter"></div>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- PAGE 3: JOB DISCOVERY                                              -->
+  <!-- Reuses the dashboard shell (same sidebar + main column).           -->
+  <!-- ================================================================= -->
+  <div id="page-discovery" style="display:none;">
+    <aside class="dash-sidebar">
+      <div class="wordmark">CareerStack<span class="accent">AI</span></div>
+
+      <div class="sidebar-group-label">Jobs</div>
+      <button class="sidebar-item is-active" id="discSidebarMatches">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4.5" width="12" height="9.5" rx="1.3" stroke="currentColor" stroke-width="1.4"/><path d="M5.6 4.4V3.2c0-.66.54-1.2 1.2-1.2h2.4c.66 0 1.2.54 1.2 1.2v1.2" stroke="currentColor" stroke-width="1.4"/></svg>
+        Matching Jobs
+      </button>
+
+      <div class="sidebar-group-label">Analysis</div>
+      <button class="sidebar-item" id="discBackToResults">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M9.5 3L5 8l4.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back to Results
+      </button>
+      <button class="sidebar-item" id="discNewAnalysis">New Analysis</button>
+
+      <div class="sidebar-bottom-card">
+        <div class="fname" id="discSidebarFilename"></div>
+        <div class="role" id="discSidebarRole"></div>
+      </div>
+    </aside>
+
+    <main class="dash-main">
+      <div class="dash-main-inner">
+
+        <!-- In-flight checklist, same visual language as the resume
+             analysing screen -- it drives the same runStepSequence(). -->
+        <div id="discLoadingBlock">
+          <div class="analysing-shell">
+            <div class="card step-card">
+              <h2>Finding matching jobs</h2>
+              <ul class="step-list" id="discStepList">
+                <li class="step-row"><span class="step-dot"></span><span class="step-label">Generating search queries</span></li>
+                <li class="step-row"><span class="step-dot"></span><span class="step-label">Fetching from Adzuna</span></li>
+                <li class="step-row"><span class="step-dot"></span><span class="step-label">Deduplicating results</span></li>
+                <li class="step-row"><span class="step-dot"></span><span class="step-label">Scoring against your resume</span></li>
+                <li class="step-row"><span class="step-dot"></span><span class="step-label">Ready</span></li>
+              </ul>
+              <p class="visually-hidden-input" aria-live="polite" id="discSrStatus"></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="discErrorBlock" style="display:none;">
+          <div class="error-shell">
+            <div class="card error-card">
+              <div class="error-icon" aria-hidden="true">!</div>
+              <h2>We couldn't find matching jobs</h2>
+              <p class="error-message" id="discErrorMessage"></p>
+              <button class="btn btn-indigo" id="discTryAgainBtn">Back to results</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="discResultsBlock" style="display:none;">
+          <div class="disc-widened-banner" id="discWidenedBanner" style="display:none;">
+            <span class="disc-banner-icon" aria-hidden="true">!</span>
+            <span id="discWidenedText"></span>
+          </div>
+
+          <div class="card disc-header-card">
+            <div>
+              <div class="disc-header-role" id="discHeaderRole"></div>
+              <div class="disc-header-city" id="discHeaderCity"></div>
+              <div class="disc-sample-meta" id="discSampleMeta"></div>
+            </div>
+          </div>
+
+          <div class="disc-filters" id="discFilters">
+            <div class="disc-filter">
+              <label class="disc-filter-check" for="discRemoteOnly">
+                <input type="checkbox" id="discRemoteOnly"> Remote only
+              </label>
+            </div>
+            <div class="disc-filter">
+              <label class="disc-filter-check" for="discHasSalary">
+                <input type="checkbox" id="discHasSalary"> Has salary
+              </label>
+            </div>
+            <div class="disc-filter">
+              <label for="discPostedWithin">Posted within</label>
+              <select id="discPostedWithin">
+                <option value="7">7 days</option>
+                <option value="14">14 days</option>
+                <option value="30" selected>30 days</option>
+              </select>
+            </div>
+            <div class="disc-filter">
+              <label for="discMinScore">Min match</label>
+              <input type="range" id="discMinScore" min="0" max="100" step="5" value="0">
+              <span class="disc-filter-value" id="discMinScoreValue">0%</span>
+            </div>
+            <div class="disc-filter-count" id="discFilterCount"></div>
+          </div>
+
+          <div id="discJobList"></div>
+
+          <div class="card disc-empty" id="discEmptyState" style="display:none;">
+            <div class="disc-empty-title" id="discEmptyTitle"></div>
+            <div class="disc-empty-sub" id="discEmptySub"></div>
+            <div class="disc-empty-actions" id="discEmptyActions"></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
   </div>
 
 <script>
@@ -728,10 +1193,330 @@
 
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
 
+  // ============ AUTH ============
+  var TOKEN_KEY = "cs_token";
+  var currentUser = null;
+  var pendingAfterAuth = null;
+  var authMode = "login";
+
+  function getToken() {
+    try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+  }
+  function setToken(token) {
+    try { localStorage.setItem(TOKEN_KEY, token); } catch (e) { /* private-mode storage, etc. -- non-fatal */ }
+  }
+  function clearToken() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* non-fatal */ }
+  }
+
+  function firstName(fullName) {
+    if (!fullName) return "";
+    return fullName.trim().split(/\s+/)[0];
+  }
+
+  // Two nav bars exist in the DOM (landing's and the upload page's) --
+  // keep both in sync every time auth state changes. currentUser.name
+  // should always be present (the backend falls back to the email's
+  // local part for accounts that predate the name field), but the
+  // email fallback stays here too as a last resort.
+  function updateNavForAuthState() {
+    [
+      { user: "navUser", email: "navUserEmail" },
+      { user: "uploadNavUser", email: "uploadNavUserEmail" }
+    ].forEach(function (ids) {
+      var navUser = document.getElementById(ids.user);
+      var navUserEmail = document.getElementById(ids.email);
+      if (currentUser) {
+        navUser.style.display = "flex";
+        navUserEmail.textContent = currentUser.name || currentUser.email;
+      } else {
+        navUser.style.display = "none";
+        navUserEmail.textContent = "";
+      }
+    });
+  }
+
+  // Fetch wrapper for every authenticated call: attaches the bearer
+  // token, and turns a 401 into a distinguishable SessionExpiredError so
+  // callers can route to the auth screen instead of the generic error path.
+  function authFetch(url, options) {
+    options = options || {};
+    var headers = options.headers || {};
+    var token = getToken();
+    if (token) headers["Authorization"] = "Bearer " + token;
+    options.headers = headers;
+
+    return fetch(url, options).then(function (res) {
+      if (res.status === 401) {
+        var err = new Error("Your session expired — please sign in again.");
+        err.isSessionExpired = true;
+        throw err;
+      }
+      return res;
+    });
+  }
+
+  // Gate an action behind auth: run it immediately if logged in, otherwise
+  // open the auth card and remember the action to resume once signed in.
+  function requireAuthThen(action) {
+    if (currentUser) {
+      action();
+    } else {
+      pendingAfterAuth = action;
+      setAuthMode("login");
+      showAuthScreen();
+    }
+  }
+
+  function bootstrapAuth() {
+    var token = getToken();
+    if (!token) {
+      showLanding();
+      return;
+    }
+    fetch("/api/auth/me", { headers: { Authorization: "Bearer " + token } })
+      .then(function (res) {
+        if (!res.ok) throw new Error("invalid session");
+        return res.json();
+      })
+      .then(function (user) {
+        currentUser = user;
+        updateNavForAuthState();
+        showLanding();
+      })
+      .catch(function () {
+        clearToken();
+        currentUser = null;
+        setAuthMode("login");
+        showAuthScreen();
+      });
+  }
+
+  var FIELD_ERROR_IDS = [
+    "loginEmailError", "loginPasswordError",
+    "registerNameError", "registerEmailError", "registerPasswordError", "registerConfirmPasswordError"
+  ];
+
+  function clearAllFieldErrors() {
+    FIELD_ERROR_IDS.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = "";
+    });
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    document.getElementById("authTabSignIn").classList.toggle("active", mode === "login");
+    document.getElementById("authTabSignUp").classList.toggle("active", mode === "register");
+    document.getElementById("loginPanel").style.display = mode === "login" ? "" : "none";
+    document.getElementById("registerPanel").style.display = mode === "register" ? "" : "none";
+    document.getElementById("authSubmitBtn").textContent = mode === "login" ? "Sign in" : "Create account";
+    document.getElementById("authError").style.display = "none";
+    clearAllFieldErrors();
+    if (mode === "register") {
+      updateRegisterSubmitEnabled();
+    } else {
+      document.getElementById("authSubmitBtn").disabled = false;
+    }
+  }
+
+  document.getElementById("authTabSignIn").addEventListener("click", function () { setAuthMode("login"); });
+  document.getElementById("authTabSignUp").addEventListener("click", function () { setAuthMode("register"); });
+
+  document.querySelectorAll(".password-toggle").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var input = document.getElementById(btn.getAttribute("data-input"));
+      if (!input) return;
+      var showingText = input.type === "text";
+      input.type = showingText ? "password" : "text";
+      btn.setAttribute("aria-label", showingText ? "Show password" : "Hide password");
+    });
+  });
+
+  // ---- Register panel: live, as-you-type validation ----
+  var registerNameInput = document.getElementById("registerName");
+  var registerPasswordInput = document.getElementById("registerPassword");
+  var registerConfirmInput = document.getElementById("registerConfirmPassword");
+
+  function updateRegisterSubmitEnabled() {
+    if (authMode !== "register") return;
+    var matches = registerConfirmInput.value.length > 0 && registerConfirmInput.value === registerPasswordInput.value;
+    document.getElementById("authSubmitBtn").disabled = !matches;
+  }
+
+  registerNameInput.addEventListener("input", function () {
+    var name = registerNameInput.value.trim();
+    document.getElementById("registerNameError").textContent = name.length < 2 ? "Enter your full name" : "";
+  });
+
+  registerPasswordInput.addEventListener("input", function () {
+    var password = registerPasswordInput.value;
+    document.getElementById("registerPasswordError").textContent =
+      password.length > 0 && password.length < 8 ? "Password must be at least 8 characters" : "";
+    // Re-validate the confirm field too -- editing the password can make
+    // an already-matching confirm value stop matching.
+    var confirmError = document.getElementById("registerConfirmPasswordError");
+    if (registerConfirmInput.value.length > 0) {
+      confirmError.textContent = registerConfirmInput.value === password ? "" : "Passwords don't match";
+    }
+    updateRegisterSubmitEnabled();
+  });
+
+  registerConfirmInput.addEventListener("input", function () {
+    var confirm = registerConfirmInput.value;
+    var confirmError = document.getElementById("registerConfirmPasswordError");
+    confirmError.textContent = confirm.length > 0 && confirm !== registerPasswordInput.value ? "Passwords don't match" : "";
+    updateRegisterSubmitEnabled();
+  });
+
+  function isValidEmailFormat(email) {
+    return !!email && email.indexOf("@") !== -1 && email.indexOf(".") !== -1;
+  }
+
+  function validateAuthForm() {
+    if (authMode === "login") {
+      var email = document.getElementById("loginEmail").value.trim();
+      var password = document.getElementById("loginPassword").value;
+      var emailError = document.getElementById("loginEmailError");
+      var passwordError = document.getElementById("loginPasswordError");
+      emailError.textContent = "";
+      passwordError.textContent = "";
+      var valid = true;
+      if (!isValidEmailFormat(email)) {
+        emailError.textContent = "Enter a valid email address.";
+        valid = false;
+      }
+      if (!password) {
+        passwordError.textContent = "Password is required.";
+        valid = false;
+      }
+      return valid;
+    }
+
+    // register
+    var name = registerNameInput.value.trim();
+    var regEmail = document.getElementById("registerEmail").value.trim();
+    var regPassword = registerPasswordInput.value;
+    var regConfirm = registerConfirmInput.value;
+
+    var nameError = document.getElementById("registerNameError");
+    var regEmailError = document.getElementById("registerEmailError");
+    var regPasswordError = document.getElementById("registerPasswordError");
+    var regConfirmError = document.getElementById("registerConfirmPasswordError");
+
+    var regValid = true;
+    if (name.length < 2) {
+      nameError.textContent = "Enter your full name";
+      regValid = false;
+    }
+    if (!isValidEmailFormat(regEmail)) {
+      regEmailError.textContent = "Enter a valid email address.";
+      regValid = false;
+    }
+    if (regPassword.length < 8) {
+      regPasswordError.textContent = "Password must be at least 8 characters";
+      regValid = false;
+    }
+    if (regConfirm !== regPassword) {
+      regConfirmError.textContent = "Passwords don't match";
+      regValid = false;
+    }
+    return regValid;
+  }
+
+  document.getElementById("authForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!validateAuthForm()) return;
+
+    var payload, endpoint;
+    if (authMode === "login") {
+      payload = {
+        email: document.getElementById("loginEmail").value.trim(),
+        password: document.getElementById("loginPassword").value,
+      };
+      endpoint = "/api/auth/login";
+    } else {
+      payload = {
+        name: registerNameInput.value.trim(),
+        email: document.getElementById("registerEmail").value.trim(),
+        password: registerPasswordInput.value,
+      };
+      endpoint = "/api/auth/register";
+    }
+
+    var submitBtn = document.getElementById("authSubmitBtn");
+    var errorEl = document.getElementById("authError");
+    errorEl.style.display = "none";
+    submitBtn.disabled = true;
+
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          if (!res.ok) throw new Error(data.detail || "Something went wrong. Please try again.");
+          return data;
+        });
+      })
+      .then(function (data) {
+        setToken(data.access_token);
+        currentUser = data.user;
+        updateNavForAuthState();
+        var next = pendingAfterAuth;
+        pendingAfterAuth = null;
+        document.getElementById("authForm").reset();
+        // Only land on the marketing page if there's nowhere else to go --
+        // a pending action (e.g. goToUploadPage) is itself a full page
+        // navigation now, so showing landing first would just flash it
+        // before immediately swapping away.
+        if (next) {
+          next();
+        } else {
+          showLanding();
+        }
+      })
+      .catch(function (err) {
+        errorEl.textContent = (err && err.message) || "Something went wrong. Please try again.";
+        errorEl.style.display = "block";
+      })
+      .finally(function () {
+        // Login always re-enables; register respects the confirm-match gate.
+        if (authMode === "login") {
+          submitBtn.disabled = false;
+        } else {
+          updateRegisterSubmitEnabled();
+        }
+      });
+  });
+
+  function signOut() {
+    clearToken();
+    currentUser = null;
+    updateNavForAuthState();
+    goToLandingPage();
+  }
+  document.getElementById("signOutBtn").addEventListener("click", signOut);
+  document.getElementById("uploadSignOutBtn").addEventListener("click", signOut);
+
   // ============ NAV / HERO SCROLL LINKS ============
-  document.getElementById("navCta").addEventListener("click", function () { scrollToId("uploadSection"); });
-  document.getElementById("heroPrimaryCta").addEventListener("click", function () { scrollToId("uploadSection"); });
+  document.getElementById("navCta").addEventListener("click", function () {
+    requireAuthThen(function () { goToUploadPage(); });
+  });
+  document.getElementById("heroPrimaryCta").addEventListener("click", function () {
+    requireAuthThen(function () { goToUploadPage(); });
+  });
   document.getElementById("heroGhostCta").addEventListener("click", function () { scrollToId("methodologySection"); });
+
+  document.getElementById("uploadNavCta").addEventListener("click", function () {
+    requireAuthThen(function () { goToUploadPage(); });
+  });
+  document.getElementById("uploadWordmark").addEventListener("click", goToLandingPage);
+  document.getElementById("uploadWordmark").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goToLandingPage(); }
+  });
+  document.getElementById("uploadBackLink").addEventListener("click", goToLandingPage);
 
   // ============ UPLOAD FORM ============
   var uploadForm = document.getElementById("uploadForm");
@@ -800,47 +1585,113 @@
   uploadForm.addEventListener("submit", function (e) {
     e.preventDefault();
     if (!selectedFile) return;
-    startAnalysis();
+    // Reachable by scrolling straight to the upload card without going
+    // through the nav/hero CTA, so this needs its own auth gate too.
+    requireAuthThen(function () { startAnalysis(); });
   });
 
   // ============ PAGE SWAP ============
   var pageLanding = document.getElementById("page-landing");
+  var pageUpload = document.getElementById("page-upload");
+  var pageAuth = document.getElementById("page-auth");
   var pageTransition = document.getElementById("page-transition");
   var pageDashboard = document.getElementById("page-dashboard");
   var analysingBlock = document.getElementById("analysingBlock");
   var errorBlock = document.getElementById("errorBlock");
+
+  var PAGE_TITLES = {
+    landing: "CareerStack AI",
+    upload: "Analyse your resume · CareerStack AI",
+    dashboard: "Your results · CareerStack AI",
+    discovery: "Matching jobs · CareerStack AI"
+  };
+  function setDocumentTitle(page) {
+    if (PAGE_TITLES[page]) document.title = PAGE_TITLES[page];
+  }
 
   function showTransitionSubView(name) {
     analysingBlock.style.display = name === "analysing" ? "" : "none";
     errorBlock.style.display = name === "error" ? "" : "none";
   }
 
-  function goToTransitionPage() {
+  function hideAllPages() {
     pageLanding.style.display = "none";
+    pageUpload.style.display = "none";
+    pageAuth.style.display = "none";
+    pageTransition.style.display = "none";
     pageDashboard.style.display = "none";
+    document.getElementById("page-discovery").style.display = "none";
+  }
+
+  function showLanding() {
+    hideAllPages();
+    pageLanding.style.display = "";
+    setDocumentTitle("landing");
+    window.scrollTo(0, 0);
+  }
+
+  function goToUploadPage() {
+    hideAllPages();
+    pageUpload.style.display = "";
+    setDocumentTitle("upload");
+    window.scrollTo(0, 0);
+  }
+
+  function goToUploadPageCleared() {
+    resetUploadForm();
+    goToUploadPage();
+  }
+
+  function showAuthScreen() {
+    hideAllPages();
+    pageAuth.style.display = "";
+    document.getElementById("authError").style.display = "none";
+    window.scrollTo(0, 0);
+  }
+
+  function showAuthScreenWithError(message) {
+    showAuthScreen();
+    var errorEl = document.getElementById("authError");
+    errorEl.textContent = message;
+    errorEl.style.display = "block";
+  }
+
+  function goToTransitionPage() {
+    hideAllPages();
     pageTransition.style.display = "";
     window.scrollTo(0, 0);
   }
 
   function goToDashboardPage() {
-    pageTransition.style.display = "none";
-    pageLanding.style.display = "none";
+    hideAllPages();
     pageDashboard.style.display = "flex";
+    setDocumentTitle("dashboard");
     window.scrollTo(0, 0);
   }
 
   function goToLandingPage() {
     resetUploadForm();
     if (scrollSpyObserver) { scrollSpyObserver.disconnect(); scrollSpyObserver = null; }
-    pageTransition.style.display = "none";
-    pageDashboard.style.display = "none";
-    pageLanding.style.display = "";
-    window.scrollTo(0, 0);
+    showLanding();
   }
 
-  document.getElementById("transitionBackLink").addEventListener("click", goToLandingPage);
-  document.getElementById("tryAgainBtn").addEventListener("click", goToLandingPage);
-  document.getElementById("newAnalysisLink").addEventListener("click", goToLandingPage);
+  // A 401 mid-session (token expired while the user was doing something):
+  // clear the token, drop back to logged-out nav state, and show the auth
+  // screen with an explanation rather than a generic error.
+  function handleSessionExpired(message) {
+    clearToken();
+    currentUser = null;
+    updateNavForAuthState();
+    setAuthMode("login");
+    showAuthScreenWithError(message);
+  }
+
+  // Both of these belong to the transition page (analysing checklist and
+  // its error sub-view) -- "back" from either returns to the upload page,
+  // not the landing, with the form cleared for a fresh attempt.
+  document.getElementById("transitionBackLink").addEventListener("click", goToUploadPageCleared);
+  document.getElementById("tryAgainBtn").addEventListener("click", goToUploadPageCleared);
+  document.getElementById("newAnalysisLink").addEventListener("click", goToUploadPageCleared);
   document.getElementById("howScoringWorksLink").addEventListener("click", function () {
     goToLandingPage();
     var target = document.getElementById("methodologySection");
@@ -860,8 +1711,8 @@
     if (state) row.classList.add(state);
   }
 
-  function resetSteps() {
-    var list = document.getElementById("stepList");
+  function resetSteps(listId) {
+    var list = document.getElementById(listId || "stepList");
     var rows = Array.prototype.slice.call(list.querySelectorAll(".step-row"));
     rows.forEach(function (row) { setStepState(row, null); });
     list.classList.remove("replay");
@@ -897,9 +1748,17 @@
     return poll();
   }
 
-  function runStepSequence(fetchPromise) {
-    var rows = Array.prototype.slice.call(document.getElementById("stepList").querySelectorAll(".step-row"));
-    var srStatus = document.getElementById("srStatus");
+  // listId/statusId/labels/durations default to the resume-analysis
+  // checklist, so existing callers are unchanged; the discovery page
+  // passes its own list and labels rather than duplicating this driver.
+  function runStepSequence(fetchPromise, options) {
+    options = options || {};
+    var rows = Array.prototype.slice.call(
+      document.getElementById(options.listId || "stepList").querySelectorAll(".step-row")
+    );
+    var srStatus = document.getElementById(options.statusId || "srStatus");
+    var labels = options.labels || STEP_LABELS;
+    var durations = options.durations || STEP_DURATIONS_MS;
     var settled = false, settleError = null, settleResult = null;
 
     fetchPromise.then(
@@ -907,7 +1766,7 @@
       function (err) { settled = true; settleError = err; }
     );
 
-    function announce(i) { if (srStatus) srStatus.textContent = STEP_LABELS[i]; }
+    function announce(i) { if (srStatus) srStatus.textContent = labels[i]; }
     function isSettled() { return settled; }
 
     if (REDUCE_MOTION) {
@@ -922,7 +1781,7 @@
       chain = chain.then(function () {
         setStepState(row, "is-active");
         announce(i);
-        return waitForStep(STEP_DURATIONS_MS[i], isSettled);
+        return waitForStep(durations[i], isSettled);
       }).then(function () { setStepState(row, "is-done"); });
     });
 
@@ -949,8 +1808,11 @@
     formData.append("role", role);
     formData.append("location", location);
 
-    return fetch("/api/analyze", { method: "POST", body: formData })
-      .catch(function () { throw new Error("Could not reach the server. Check your connection and try again."); })
+    return authFetch("/api/analyze", { method: "POST", body: formData })
+      .catch(function (err) {
+        if (err && err.isSessionExpired) throw err;
+        throw new Error("Could not reach the server. Check your connection and try again.");
+      })
       .then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (data) {
           if (!res.ok) throw new Error(data.detail || ("The server returned an error (" + res.status + ")."));
@@ -974,6 +1836,10 @@
       goToDashboardPage();
       renderDashboard(data, filename, role, location);
     }).catch(function (err) {
+      if (err && err.isSessionExpired) {
+        handleSessionExpired(err.message);
+        return;
+      }
       showError(err && err.message ? err.message : "Something went wrong while analysing your resume.");
     });
   }
@@ -1074,6 +1940,92 @@
     });
   });
 
+  // ============ HISTORY (sidebar) ============
+  function formatHistoryDate(iso) {
+    if (!iso) return "";
+    var date = new Date(iso);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function renderHistoryRows(items) {
+    var panel = document.getElementById("historyPanel");
+    panel.innerHTML = "";
+    if (!items || items.length === 0) {
+      panel.innerHTML = '<div class="history-empty">No previous analyses yet.</div>';
+      return;
+    }
+    items.forEach(function (item) {
+      var fitScore = typeof item.overall_score === "number" ? item.overall_score.toFixed(0) : "—";
+      var parseScore = typeof item.parse_score === "number" ? item.parse_score.toFixed(0) : "—";
+      var row = document.createElement("button");
+      row.type = "button";
+      row.className = "history-row";
+      row.innerHTML =
+        '<div class="history-fname">' + escapeHtml(item.filename || "Untitled") + "</div>" +
+        '<div class="history-meta">' + escapeHtml(item.role || "") + " · " + escapeHtml(formatHistoryDate(item.created_at)) + "</div>" +
+        '<div class="history-pills">' +
+          '<span class="history-pill">Parse ' + parseScore + "</span>" +
+          '<span class="history-pill">Fit ' + fitScore + "</span>" +
+        "</div>";
+      row.addEventListener("click", function () { loadAnalysisFromHistory(item.analysis_id); });
+      panel.appendChild(row);
+    });
+  }
+
+  function loadHistory() {
+    var panel = document.getElementById("historyPanel");
+    panel.innerHTML = '<div class="history-loading">Loading…</div>';
+
+    authFetch("/api/analyses")
+      .then(function (res) {
+        return res.json().catch(function () { return []; }).then(function (data) {
+          if (!res.ok) throw new Error((data && data.detail) || "Could not load your history.");
+          return data;
+        });
+      })
+      .then(renderHistoryRows)
+      .catch(function (err) {
+        if (err && err.isSessionExpired) {
+          handleSessionExpired(err.message);
+          return;
+        }
+        panel.innerHTML = '<div class="history-empty">Could not load your history.</div>';
+      });
+  }
+
+  document.getElementById("historyToggle").addEventListener("click", function () {
+    var panel = document.getElementById("historyPanel");
+    if (panel.style.display !== "none") {
+      panel.style.display = "none";
+      return;
+    }
+    panel.style.display = "block";
+    loadHistory(); // refresh on every open, so a just-finished analysis shows up
+  });
+
+  function loadAnalysisFromHistory(analysisId) {
+    authFetch("/api/analyze/" + encodeURIComponent(analysisId))
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          if (!res.ok) throw new Error(data.detail || "Could not load that analysis.");
+          return data;
+        });
+      })
+      .then(function (data) {
+        goToDashboardPage();
+        renderDashboard(data, data.filename, data.role, data.location);
+      })
+      .catch(function (err) {
+        if (err && err.isSessionExpired) {
+          handleSessionExpired(err.message);
+          return;
+        }
+        goToTransitionPage();
+        showError(err && err.message ? err.message : "Could not load that analysis.");
+      });
+  }
+
   function playDashboardEntrance() {
     var shell = document.getElementById("dashMainInner");
     var sections = Array.prototype.slice.call(shell.querySelectorAll(".result-section"));
@@ -1113,6 +2065,15 @@
     if (typeof meta.postings_sampled === "number") {
       parts.push(meta.postings_sampled + " postings sampled " + escapeHtml(formatSampledDate(meta.sampled_at)));
     }
+
+    var greetingHi = document.getElementById("greetingHi");
+    if (currentUser && currentUser.name) {
+      greetingHi.textContent = "Hi, " + firstName(currentUser.name);
+      greetingHi.style.display = "";
+    } else {
+      greetingHi.style.display = "none";
+    }
+
     document.getElementById("greetingSub").innerHTML = parts.join(" &nbsp;·&nbsp; ");
     document.getElementById("sidebarFilename").textContent = filename;
     document.getElementById("sidebarRole").textContent = role + " · " + location;
@@ -1202,9 +2163,9 @@
     });
   }
 
-  // Six named dimensions, all derived from data already computed server-
-  // side (ats.py's "dimensions" list) -- no new scoring happens here,
-  // this just renders it.
+  // Seven named dimensions, all derived from data already computed
+  // server-side (ats.py's "dimensions" list) -- no new scoring happens
+  // here, this just renders it.
   function renderDimensions(dimensions) {
     var grid = document.getElementById("dimensionGrid");
     grid.innerHTML = "";
@@ -1337,7 +2298,17 @@
       var acc = document.createElement("div");
       acc.className = "accordion" + (i === 0 ? " is-open" : "");
 
-      var summary = (TYPE_LABELS[item.type] || item.type) + " · " + (item.effort || "") + " effort";
+      // Missing-skill rows show the actual signal (mention count out of
+      // the sample) rather than effort -- "low effort" reads the same for
+      // a skill in 3 postings as one in 15, which is exactly the
+      // distinction the collapsed row should be making visible.
+      var summary;
+      if (item.type === "missing_skill" && item.detail && typeof item.detail.count === "number") {
+        var postingsLabel = typeof postingsSampled === "number" ? postingsSampled : "?";
+        summary = "Missing skill · in " + item.detail.count + " of " + postingsLabel + " postings";
+      } else {
+        summary = (TYPE_LABELS[item.type] || item.type) + " · " + (item.effort || "") + " effort";
+      }
 
       acc.innerHTML =
         '<button class="accordion-header" type="button">' +
@@ -1371,39 +2342,72 @@
     });
   }
 
-  function renderSkillChips(keywordDetail, postingsSampled) {
-    keywordDetail = keywordDetail || {};
-    var matched = keywordDetail.matched || [];
-    var missing = keywordDetail.missing || [];
-    var matchedRow = document.getElementById("matchedChips");
-    var missingRow = document.getElementById("missingChips");
-    matchedRow.innerHTML = ""; missingRow.innerHTML = "";
+  // One technical/professional block: header stats ("n of m matched · c%
+  // coverage"), matched/missing chip rows, or -- when the profile had no
+  // skills at all in this category -- a muted "No {label} appeared..."
+  // line in place of the chip rows entirely, per prefix+"Empty".
+  function renderSkillCategory(prefix, group, postingsSampled, emptyLabel) {
+    group = group || { matched: [], missing: [], coverage: 0 };
+    var matched = group.matched || [];
+    var missing = group.missing || [];
+    var total = matched.length + missing.length;
     var totalLabel = typeof postingsSampled === "number" ? postingsSampled : "?";
 
+    var statsEl = document.getElementById(prefix + "Stats");
+    var chipsEl = document.getElementById(prefix + "Chips");
+    var emptyEl = document.getElementById(prefix + "Empty");
+    var matchedRow = document.getElementById(prefix + "MatchedChips");
+    var missingRow = document.getElementById(prefix + "MissingChips");
+
+    if (total === 0) {
+      statsEl.textContent = "";
+      chipsEl.hidden = true;
+      emptyEl.hidden = false;
+      emptyEl.textContent = "No " + emptyLabel + " appeared in the sampled postings";
+      return;
+    }
+
+    chipsEl.hidden = false;
+    emptyEl.hidden = true;
+
+    var coveragePct = Math.round((group.coverage || 0) * 100);
+    statsEl.textContent = matched.length + " of " + total + " matched · " + coveragePct + "% coverage";
+
+    var isMuted = prefix === "professionalSkill";
+
+    matchedRow.innerHTML = "";
     if (matched.length === 0) {
       matchedRow.innerHTML = '<span class="chip-empty">No skills matched yet</span>';
     } else {
       matched.forEach(function (item, i) {
         var chip = document.createElement("span");
-        chip.className = "chip chip-matched";
+        chip.className = "chip chip-matched" + (isMuted ? " chip--muted" : "");
         chip.style.animationDelay = (i * 30) + "ms";
         chip.textContent = item.skill + " · " + item.count + " of " + totalLabel;
         matchedRow.appendChild(chip);
       });
     }
 
+    missingRow.innerHTML = "";
     if (missing.length === 0) {
       missingRow.innerHTML = '<span class="chip-empty">No missing skills — full coverage</span>';
     } else {
       missing.forEach(function (item, i) {
         var chip = document.createElement("span");
         var tier = item.frequency >= 0.30 ? "chip-missing-high" : "chip-missing-low";
-        chip.className = "chip " + tier;
+        chip.className = "chip " + tier + (isMuted ? " chip--muted" : "");
         chip.style.animationDelay = (i * 30) + "ms";
         chip.textContent = item.skill + " · " + item.count + " of " + totalLabel;
         missingRow.appendChild(chip);
       });
     }
+  }
+
+  function renderSkillChips(keywordDetail, postingsSampled) {
+    keywordDetail = keywordDetail || {};
+    var byCategory = keywordDetail.by_category || {};
+    renderSkillCategory("technicalSkill", byCategory.technical, postingsSampled, "technical skills");
+    renderSkillCategory("professionalSkill", byCategory.professional, postingsSampled, "professional skills");
   }
 
   function renderFormatIssues(formatDetail) {
@@ -1439,6 +2443,10 @@
 
   function renderDashboard(data, filename, role, location) {
     data = data || {};
+    // Remembered for the discovery page, which runs against the analysis
+    // currently on screen.
+    currentAnalysisId = data.analysis_id || null;
+    currentAnalysisMeta = { filename: filename, role: role, location: location };
     var subscores = data.subscores || { keyword: 0, semantic: 0, format: 0, experience: 0 };
     var postingsSampled = data.role_profile_meta ? data.role_profile_meta.postings_sampled : null;
 
@@ -1463,6 +2471,496 @@
     playDashboardEntrance();
     setupScrollSpy();
   }
+
+
+  // ============ JOB DISCOVERY ============
+
+  var currentAnalysisId = null;
+  var currentAnalysisMeta = { filename: "", role: "", location: "" };
+  var discoveryRun = null;          // the completed run payload
+  var discoveryPollTimer = null;
+
+  var DISC_STEP_LABELS = [
+    "Generating search queries",
+    "Fetching from Adzuna",
+    "Deduplicating results",
+    "Scoring against your resume",
+    "Ready"
+  ];
+  // Rows 0-3; row 4 waits for the real response. Fetching dominates a
+  // real run, so it gets the longest nominal dwell.
+  var DISC_STEP_DURATIONS_MS = [450, 3400, 1200, 1600];
+  var DISCOVERY_POLL_MS = 900;
+  // A run is a handful of Adzuna pages; well past this something is wrong
+  // and the user deserves an error rather than a spinner forever.
+  var DISCOVERY_TIMEOUT_MS = 90000;
+
+  function discShowSubView(name) {
+    document.getElementById("discLoadingBlock").style.display = name === "loading" ? "" : "none";
+    document.getElementById("discErrorBlock").style.display = name === "error" ? "" : "none";
+    document.getElementById("discResultsBlock").style.display = name === "results" ? "" : "none";
+  }
+
+  function goToDiscoveryPage() {
+    hideAllPages();
+    document.getElementById("page-discovery").style.display = "flex";
+    setDocumentTitle("discovery");
+    window.scrollTo(0, 0);
+  }
+
+  function discShowError(message) {
+    discShowSubView("error");
+    document.getElementById("discErrorMessage").textContent = message;
+  }
+
+  // Polls GET /api/discovery/{id} until the run leaves pending/running.
+  // Resolves with the completed run, rejects on failure or timeout.
+  function pollDiscoveryRun(runId) {
+    var startedAt = Date.now();
+    return new Promise(function (resolve, reject) {
+      function tick() {
+        authFetch("/api/discovery/" + encodeURIComponent(runId))
+          .then(function (res) {
+            if (!res.ok) {
+              return res.json().catch(function () { return {}; }).then(function (body) {
+                throw new Error(body.detail || "We couldn't load those job matches.");
+              });
+            }
+            return res.json();
+          })
+          .then(function (run) {
+            if (run.status === "complete") return resolve(run);
+            if (run.status === "failed") {
+              return reject(new Error(run.error || "The job search didn't complete."));
+            }
+            if (Date.now() - startedAt > DISCOVERY_TIMEOUT_MS) {
+              return reject(new Error("The job search is taking longer than expected. Please try again."));
+            }
+            discoveryPollTimer = setTimeout(tick, DISCOVERY_POLL_MS);
+          })
+          .catch(reject);
+      }
+      tick();
+    });
+  }
+
+  function startDiscovery() {
+    if (!currentAnalysisId) {
+      discShowError("We couldn't tell which analysis to match jobs against. Re-run your analysis and try again.");
+      goToDiscoveryPage();
+      return;
+    }
+
+    if (discoveryPollTimer) { clearTimeout(discoveryPollTimer); discoveryPollTimer = null; }
+
+    document.getElementById("discSidebarFilename").textContent = currentAnalysisMeta.filename || "";
+    document.getElementById("discSidebarRole").textContent =
+      (currentAnalysisMeta.role || "") + (currentAnalysisMeta.location ? " · " + currentAnalysisMeta.location : "");
+
+    goToDiscoveryPage();
+    discShowSubView("loading");
+    resetSteps("discStepList");
+
+    var runPromise = authFetch("/api/discovery/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ analysis_id: currentAnalysisId })
+    })
+      .then(function (res) {
+        if (!res.ok) {
+          return res.json().catch(function () { return {}; }).then(function (body) {
+            throw new Error(body.detail || "We couldn't start a job search just now.");
+          });
+        }
+        return res.json();
+      })
+      .then(function (body) { return pollDiscoveryRun(body.run_id); });
+
+    runStepSequence(runPromise, {
+      listId: "discStepList",
+      statusId: "discSrStatus",
+      labels: DISC_STEP_LABELS,
+      durations: DISC_STEP_DURATIONS_MS
+    })
+      .then(function (run) {
+        discoveryRun = run;
+        renderDiscovery(run);
+        discShowSubView("results");
+      })
+      .catch(function (err) {
+        if (err && err.isSessionExpired) { handleSessionExpired(err.message); return; }
+        discShowError(err && err.message ? err.message : "Something went wrong while finding matching jobs.");
+      });
+  }
+
+  // ---- rendering ----
+
+  // Per-source attribution. Each provider's terms require its own credit,
+  // so this must follow job.source rather than assume Adzuna.
+  var DISC_SOURCE_LABELS = {
+    adzuna: "via Adzuna",
+    jsearch: "via JSearch",
+    greenhouse: "via Greenhouse"
+  };
+
+  // The backend stamps source_label onto every posting (see
+  // jobs/base.py); this only fills in for older cached runs saved before
+  // that field existed.
+  function discSourceLabel(source) {
+    return DISC_SOURCE_LABELS[source] || "via " + (source || "an external job board");
+  }
+
+  function discJobAttribution(job) {
+    return job.source_label || discSourceLabel(job.source);
+  }
+
+  function discMatchBand(score) {
+    if (score >= 70) return "disc-band-strong";
+    if (score >= 50) return "disc-band-good";
+    if (score >= 30) return "disc-band-fair";
+    return "disc-band-weak";
+  }
+
+  function discDaysAgo(postedAt) {
+    if (!postedAt) return null;
+    var posted = new Date(postedAt);
+    if (isNaN(posted.getTime())) return null;
+    return Math.max(0, Math.floor((Date.now() - posted.getTime()) / 86400000));
+  }
+
+  function discPostedLabel(postedAt) {
+    var days = discDaysAgo(postedAt);
+    if (days === null) return "Date not given";
+    if (days === 0) return "Posted today";
+    if (days === 1) return "Posted yesterday";
+    return "Posted " + days + " days ago";
+  }
+
+  function discFormatSalary(job) {
+    if (job.salary_min == null && job.salary_max == null) return null;
+    var currency = job.salary_currency === "INR" ? "₹" : "";
+    function compact(value) {
+      if (value == null) return null;
+      if (value >= 10000000) return (value / 10000000).toFixed(1).replace(/\.0$/, "") + " Cr";
+      if (value >= 100000) return (value / 100000).toFixed(1).replace(/\.0$/, "") + " L";
+      if (value >= 1000) return Math.round(value / 1000) + "k";
+      return String(Math.round(value));
+    }
+    var low = compact(job.salary_min), high = compact(job.salary_max);
+    if (low && high && low !== high) return currency + low + " – " + currency + high;
+    return currency + (low || high);
+  }
+
+  function discRenderChips(skills, kind, max) {
+    var shown = (skills || []).slice(0, max);
+    if (!shown.length) return "";
+    var mark = kind === "matched" ? "✓" : "✕";
+    var cls = kind === "matched" ? "disc-chip-matched" : "disc-chip-missing";
+    return shown.map(function (skill) {
+      return '<span class="disc-chip ' + cls + '"><span aria-hidden="true">' + mark + "</span>" +
+        escapeHtml(skill) + "</span>";
+    }).join("");
+  }
+
+  function discJobCardHtml(job) {
+    var score = Math.round(job.match_score || 0);
+    var salary = discFormatSalary(job);
+    var city = job.location || "Location not given";
+    var meta = job.meta || {};
+    // Two different statements, two different tags. "Not scored on skills"
+    // means the snippet named nothing we recognise, so the skills term
+    // couldn't be computed at all -- showing that as a low percentage
+    // would read as "you're a poor match", which isn't what we found.
+    var confTag = "";
+    if (meta.skills_unscored) {
+      confTag = '<span class="disc-lowconf-tag" title="This posting named no skills we recognise, so its skills score could not be computed. Ranked on recency and location only.">NOT SCORED ON SKILLS</span>';
+    } else if (meta.low_confidence) {
+      var named = meta.skills_detected_in_posting || 0;
+      confTag = '<span class="disc-lowconf-tag" title="This posting named only ' + named +
+        ' skill' + (named === 1 ? "" : "s") + ', too few to score its fit confidently.">LOW CONFIDENCE</span>';
+    }
+
+    var subParts = [escapeHtml(job.company || "Company not given"), escapeHtml(city), discPostedLabel(job.posted_at)];
+
+    return '' +
+      '<div class="card disc-job-card" data-fingerprint="' + escapeHtml(job.fingerprint) + '">' +
+        '<div class="disc-job-top">' +
+          '<div class="disc-match-badge ' + discMatchBand(score) + '">' + score +
+            '<span class="disc-match-unit">match</span>' +
+          "</div>" +
+          "<div style=\"flex:1; min-width:0;\">" +
+            '<div class="disc-job-title">' + escapeHtml(job.title || "Untitled role") +
+              confTag +
+            "</div>" +
+            '<div class="disc-job-sub">' + subParts.join('<span class="disc-dot">·</span>') +
+              (job.is_remote ? '<span class="disc-dot">·</span>Remote' : "") +
+            "</div>" +
+            '<div class="disc-chip-row">' +
+              discRenderChips(job.matched_skills, "matched", 4) +
+              discRenderChips(job.missing_skills, "missing", 4) +
+            "</div>" +
+          "</div>" +
+        "</div>" +
+        '<div class="disc-job-foot">' +
+          (salary ? '<span class="disc-salary">' + escapeHtml(salary) + "</span>" : "") +
+          '<span class="disc-attribution">' + escapeHtml(discJobAttribution(job)) + "</span>" +
+          '<span class="disc-job-actions">' +
+            '<button class="btn btn-ghost disc-btn-sm disc-analyse-btn" data-fingerprint="' + escapeHtml(job.fingerprint) + '">Analyse against this job</button>' +
+            (job.url ? '<a class="btn btn-indigo disc-btn-sm" href="' + escapeHtml(job.url) + '" target="_blank" rel="noopener noreferrer">View posting</a>' : "") +
+          "</span>" +
+        "</div>" +
+      "</div>";
+  }
+
+  function discReadFilters() {
+    return {
+      remoteOnly: document.getElementById("discRemoteOnly").checked,
+      hasSalary: document.getElementById("discHasSalary").checked,
+      withinDays: parseInt(document.getElementById("discPostedWithin").value, 10),
+      minScore: parseInt(document.getElementById("discMinScore").value, 10)
+    };
+  }
+
+  function discApplyFilters(jobs, filters) {
+    return (jobs || []).filter(function (job) {
+      if (filters.remoteOnly && !job.is_remote) return false;
+      if (filters.hasSalary && job.salary_min == null && job.salary_max == null) return false;
+      if ((job.match_score || 0) < filters.minScore) return false;
+      var days = discDaysAgo(job.posted_at);
+      // A posting with no usable date is kept rather than silently
+      // dropped -- we don't know it's old, and hiding it would quietly
+      // shrink the list for a reason the user can't see.
+      if (days !== null && days > filters.withinDays) return false;
+      return true;
+    });
+  }
+
+  function discRenderEmptyState(role, city, isFiltered) {
+    var titleEl = document.getElementById("discEmptyTitle");
+    var subEl = document.getElementById("discEmptySub");
+    var actionsEl = document.getElementById("discEmptyActions");
+
+    if (isFiltered) {
+      titleEl.textContent = "No postings match these filters.";
+      subEl.textContent = "Every posting we found was filtered out. Try relaxing one of the filters above.";
+      actionsEl.innerHTML = '<button class="btn btn-ghost" id="discClearFilters">Clear filters</button>';
+      document.getElementById("discClearFilters").addEventListener("click", function () {
+        document.getElementById("discRemoteOnly").checked = false;
+        document.getElementById("discHasSalary").checked = false;
+        document.getElementById("discPostedWithin").value = "30";
+        document.getElementById("discMinScore").value = "0";
+        document.getElementById("discMinScoreValue").textContent = "0%";
+        discRenderJobList();
+      });
+      return;
+    }
+
+    titleEl.textContent = "No postings found for " + role + " in " + city + " within 30 days.";
+    subEl.textContent = "The search covered several title variations and still came back empty.";
+    actionsEl.innerHTML =
+      '<button class="btn btn-indigo" id="discWidenBtn">Try widening to India</button>' +
+      '<button class="btn btn-ghost" id="discRelatedBtn">Try a related title</button>';
+    // Both re-run the analysis with different inputs, since the role and
+    // location come from the analysis, not from this page.
+    document.getElementById("discWidenBtn").addEventListener("click", goToUploadPageCleared);
+    document.getElementById("discRelatedBtn").addEventListener("click", goToUploadPageCleared);
+  }
+
+  function discRenderJobList() {
+    if (!discoveryRun) return;
+    var filters = discReadFilters();
+    var all = discoveryRun.jobs || [];
+    var visible = discApplyFilters(all, filters);
+
+    document.getElementById("discFilterCount").textContent =
+      visible.length === all.length
+        ? "Showing all " + all.length + (all.length === 1 ? " posting" : " postings")
+        : "Showing " + visible.length + " of " + all.length + " postings";
+
+    var listEl = document.getElementById("discJobList");
+    var emptyEl = document.getElementById("discEmptyState");
+
+    if (!visible.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "";
+      var target = discoveryRun.target || {};
+      discRenderEmptyState(target.role || "this role", target.location || "your area", all.length > 0);
+      return;
+    }
+
+    emptyEl.style.display = "none";
+    listEl.innerHTML = visible.map(discJobCardHtml).join("");
+    Array.prototype.forEach.call(listEl.querySelectorAll(".disc-analyse-btn"), function (btn) {
+      btn.addEventListener("click", function () {
+        openJobDetail(btn.getAttribute("data-fingerprint"));
+      });
+    });
+  }
+
+  function renderDiscovery(run) {
+    var target = run.target || {};
+    var stats = run.stats || {};
+
+    document.getElementById("discHeaderRole").textContent = target.role || "Matching jobs";
+    document.getElementById("discHeaderCity").textContent = target.location || "";
+
+    var duplicateRate = Math.round((stats.duplicate_rate || 0) * 100);
+    var summary =
+      (stats.unique || 0) + " unique postings from " + (stats.fetched || 0) +
+      " fetched · " + duplicateRate + "% duplicate rate";
+
+    // Per-source contribution, so it's visible which board supplied what
+    // (and which sources returned nothing, e.g. JSearch with no API key).
+    var bySource = stats.by_source || {};
+    var sourceParts = ["adzuna", "jsearch", "greenhouse"]
+      .filter(function (name) { return bySource[name]; })
+      .map(function (name) {
+        return bySource[name] + " " + discSourceLabel(name).replace("via ", "");
+      });
+    if (sourceParts.length) summary += " · " + sourceParts.join(", ");
+
+    document.getElementById("discSampleMeta").textContent = summary;
+
+    var banner = document.getElementById("discWidenedBanner");
+    if (run.widened) {
+      banner.style.display = "";
+      document.getElementById("discWidenedText").textContent =
+        "We widened the search from " + run.widened.from + " to " + run.widened.to +
+        " — " + run.widened.reason + ".";
+    } else {
+      banner.style.display = "none";
+    }
+
+    discRenderJobList();
+  }
+
+  // ---- per-posting detail ----
+
+  function discBreakdownRow(label, value, note) {
+    var pct = Math.round((value || 0) * 100);
+    return '<div class="disc-breakdown-row">' +
+      '<span class="disc-breakdown-label">' + escapeHtml(label) + "</span>" +
+      '<span class="disc-breakdown-bar"><span class="disc-breakdown-fill" style="width:' + pct + '%"></span></span>' +
+      '<span class="disc-breakdown-value">' + pct + "%</span>" +
+      "</div>" +
+      (note ? '<div style="font-size:12.5px; color:var(--muted); margin:-2px 0 6px 162px;">' + escapeHtml(note) + "</div>" : "");
+  }
+
+  function openJobDetail(fingerprint) {
+    if (!discoveryRun) return;
+    authFetch("/api/discovery/" + encodeURIComponent(discoveryRun.run_id) +
+              "/jobs/" + encodeURIComponent(fingerprint))
+      .then(function (res) {
+        if (!res.ok) {
+          return res.json().catch(function () { return {}; }).then(function (body) {
+            throw new Error(body.detail || "We couldn't load that posting.");
+          });
+        }
+        return res.json();
+      })
+      .then(renderJobDetail)
+      .catch(function (err) {
+        if (err && err.isSessionExpired) { handleSessionExpired(err.message); return; }
+        window.alert(err && err.message ? err.message : "We couldn't load that posting.");
+      });
+  }
+
+  function renderJobDetail(job) {
+    var breakdown = job.score_breakdown || {};
+    var meta = job.meta || {};
+    var weights = breakdown.weights || {};
+    var score = Math.round(job.match_score || 0);
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "disc-detail-backdrop";
+    backdrop.innerHTML =
+      '<div class="disc-detail-panel" role="dialog" aria-modal="true" aria-label="Job match detail">' +
+        '<div class="disc-detail-head">' +
+          '<div class="disc-match-badge ' + discMatchBand(score) + '">' + score +
+            '<span class="disc-match-unit">match</span></div>' +
+          "<div style=\"flex:1; min-width:0;\">" +
+            '<div class="disc-job-title">' + escapeHtml(job.title || "Untitled role") + "</div>" +
+            '<div class="disc-job-sub">' + escapeHtml(job.company || "") +
+              '<span class="disc-dot">·</span>' + escapeHtml(job.location || "") + "</div>" +
+          "</div>" +
+          '<button class="disc-detail-close" aria-label="Close">×</button>' +
+        "</div>" +
+
+        '<div class="disc-detail-section">' +
+          "<h4>How this match was scored</h4>" +
+          discBreakdownRow(
+            "Skills (weight " + Math.round((weights.keyword || 0) * 100) + "%)",
+            breakdown.keyword_effective,
+            meta.skills_unscored
+              ? "This posting named no skills we recognise, so there was nothing to score against. It ranks on recency and location alone."
+              : (meta.low_confidence
+                ? "Damped from " + Math.round((breakdown.keyword_coverage || 0) * 100) +
+                  "% raw coverage — this posting named only " + (meta.skills_detected_in_posting || 0) +
+                  " skill" + (meta.skills_detected_in_posting === 1 ? "" : "s") + ", too few to be confident."
+                : null)
+          ) +
+          discBreakdownRow("Recency (weight " + Math.round((weights.recency || 0) * 100) + "%)", breakdown.recency) +
+          discBreakdownRow("Location (weight " + Math.round((weights.location || 0) * 100) + "%)", breakdown.location_fit) +
+        "</div>" +
+
+        '<div class="disc-detail-section">' +
+          "<h4>Skills this posting names</h4>" +
+          '<div class="disc-chip-row">' +
+            (discRenderChips(job.matched_skills, "matched", 20) || "") +
+            (discRenderChips(job.missing_skills, "missing", 20) || "") +
+            ((!(job.matched_skills || []).length && !(job.missing_skills || []).length)
+              ? '<span style="color:var(--muted); font-size:13.5px;">This posting\'s description didn\'t name any skills we recognise.</span>'
+              : "") +
+          "</div>" +
+        "</div>" +
+
+        '<div class="disc-detail-section">' +
+          "<h4>Posting description</h4>" +
+          '<div class="disc-detail-desc">' + escapeHtml(job.description || "No description provided.") + "</div>" +
+          '<div class="disc-truncation-note">Adzuna returns a shortened snippet (' +
+            (meta.description_chars || 0) + ' characters here), not the full posting. This match score reflects only what that snippet named — open the posting to see the real requirements.</div>' +
+        "</div>" +
+
+        '<div class="disc-detail-section" style="display:flex; gap:10px;">' +
+          (job.url ? '<a class="btn btn-indigo" href="' + escapeHtml(job.url) + '" target="_blank" rel="noopener noreferrer">View full posting</a>' : "") +
+        "</div>" +
+      "</div>";
+
+    function close() {
+      document.removeEventListener("keydown", onKey);
+      if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+    }
+    function onKey(event) { if (event.key === "Escape") close(); }
+
+    backdrop.querySelector(".disc-detail-close").addEventListener("click", close);
+    backdrop.addEventListener("click", function (event) { if (event.target === backdrop) close(); });
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(backdrop);
+  }
+
+  // ---- wiring ----
+
+  document.getElementById("findJobsSidebarBtn").addEventListener("click", startDiscovery);
+  document.getElementById("findJobsPlanBtn").addEventListener("click", startDiscovery);
+  document.getElementById("discSidebarMatches").addEventListener("click", function () {
+    window.scrollTo(0, 0);
+  });
+  document.getElementById("discBackToResults").addEventListener("click", function () {
+    if (discoveryPollTimer) { clearTimeout(discoveryPollTimer); discoveryPollTimer = null; }
+    goToDashboardPage();
+  });
+  document.getElementById("discNewAnalysis").addEventListener("click", goToUploadPageCleared);
+  document.getElementById("discTryAgainBtn").addEventListener("click", goToDashboardPage);
+
+  ["discRemoteOnly", "discHasSalary", "discPostedWithin"].forEach(function (id) {
+    document.getElementById(id).addEventListener("change", discRenderJobList);
+  });
+  document.getElementById("discMinScore").addEventListener("input", function (event) {
+    document.getElementById("discMinScoreValue").textContent = event.target.value + "%";
+    discRenderJobList();
+  });
+
+  bootstrapAuth();
 
 })();
 </script>
