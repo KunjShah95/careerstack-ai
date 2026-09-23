@@ -13,4 +13,10 @@ httpx
 tenacity
 python-dateutil
 groq
+pyjwt
+bcrypt
+# Required for pydantic's EmailStr (used by UserCreate/UserLogin) to work
+# at all -- pydantic raises at import time without it. Not explicitly
+# requested alongside pyjwt/bcrypt, but strictly necessary for those models.
+email-validator
 pytest
