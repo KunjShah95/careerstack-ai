@@ -1,6 +1,12 @@
 venv/
 __pycache__/
 .env
-data/
 *.pyc
 .pytest_cache/
+
+# Runtime cache only -- leading slash anchors this to the repo root.
+# Without it the rule also matched app/data/, which holds source files the
+# app reads at import time (skills_vocab.json, skill_aliases.json,
+# greenhouse_companies.json). Those were silently untracked, so a fresh
+# clone crashed on import.
+/data/
