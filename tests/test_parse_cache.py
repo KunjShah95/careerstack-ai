@@ -10,7 +10,7 @@ import pytest
 import app.services.extraction.parse_cache as parse_cache_module
 from app.config import settings
 from app.models.resume import ContactInfo, ParsedResume
-from app.services.extraction.parse_cache import _cache_key, get_or_parse
+from app.services.extraction.parse_cache import get_or_parse, resume_file_key
 from app.store import save_json
 
 
@@ -59,8 +59,8 @@ def test_cache_key_is_based_on_file_bytes_not_filename():
     """The function doesn't take a filename at all -- this just confirms
     the key genuinely comes from content, not something incidental.
     """
-    assert _cache_key(b"resume A") != _cache_key(b"resume B")
-    assert _cache_key(b"same bytes") == _cache_key(b"same bytes")
+    assert resume_file_key(b"resume A") != resume_file_key(b"resume B")
+    assert resume_file_key(b"same bytes") == resume_file_key(b"same bytes")
 
 
 def test_cache_miss_calls_parse_resume_and_saves_the_result(monkeypatch):
@@ -76,7 +76,7 @@ def test_cache_miss_calls_parse_resume_and_saves_the_result(monkeypatch):
 
     from app.store import load_json
 
-    cached = load_json(COLLECTION, _cache_key(file_bytes))
+    cached = load_json(COLLECTION, resume_file_key(file_bytes))
     assert cached is not None
     assert cached["contact"]["name"] == "Freshly Parsed"
 
@@ -88,7 +88,7 @@ def test_demo_mode_never_calls_parse_resume_on_a_cache_hit(monkeypatch):
     monkeypatch.setattr(parse_cache_module, "parse_resume", _network_was_hit)
 
     file_bytes = b"a resume that is already cached"
-    save_json(COLLECTION, _cache_key(file_bytes), _stub_resume("Cached Person").model_dump())
+    save_json(COLLECTION, resume_file_key(file_bytes), _stub_resume("Cached Person").model_dump())
 
     settings.demo_mode = True
     result = get_or_parse(file_bytes, "text is irrelevant on a cache hit")

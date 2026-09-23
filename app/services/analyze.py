@@ -12,11 +12,11 @@ import uuid
 from datetime import datetime, timezone
 
 from app.services.extraction.layout import get_layout_signals
-from app.services.extraction.parse_cache import get_or_parse
+from app.services.extraction.parse_cache import get_or_parse, resume_file_key
 from app.services.extraction.text_extract import extract_text
 from app.services.roleprofile.cache import get_most_recent_cached_profile, get_or_mine
 from app.services.scoring.ats import build_action_plan, compute_ats_score
-from app.store import save_json
+from app.store import list_keys, load_json, save_json
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +52,13 @@ def _degraded_message(requested_role: str, requested_location: str, fallback_pro
     )
 
 
-async def run_analysis(file_bytes: bytes, filename: str, role: str, location: str) -> dict:
+async def run_analysis(file_bytes: bytes, filename: str, role: str, location: str, user_id: str) -> dict:
     """Run the full pipeline and return the saved analysis dict.
+
+    user_id is stamped onto the saved record -- analyses belong to the
+    user who created them (see main.py's protected /api/analyze and
+    /api/analyze/{id}, and list_user_analyses below). Required, not
+    optional: every analysis has an owner now.
 
     Can raise: ExtractionError (text_extract.py / llm_parse.py -- bad or
     unparseable file), NeedsOcrError (no selectable text), RuntimeError
@@ -110,6 +115,7 @@ async def run_analysis(file_bytes: bytes, filename: str, role: str, location: st
     analysis_id = uuid.uuid4().hex
     analysis = {
         "analysis_id": analysis_id,
+        "user_id": user_id,
         "filename": filename,
         "role": role,
         "location": location,
@@ -119,6 +125,13 @@ async def run_analysis(file_bytes: bytes, filename: str, role: str, location: st
             "page_count": extracted["page_count"],
             "char_count": extracted["char_count"],
         },
+        # The parse cache's own key for this file. An analysis record
+        # stores scoring output, not the resume itself, so without this
+        # there's no way back from an analysis_id to the resume's skills --
+        # which discovery.py needs to score individual postings. Records
+        # written before this field existed simply don't have it; callers
+        # degrade rather than fail (see discovery.py's _resume_for_analysis).
+        "resume_file_key": resume_file_key(file_bytes),
         "degraded": degraded_message is not None,
         "degraded_message": degraded_message,
         **ats_result,
@@ -130,3 +143,38 @@ async def run_analysis(file_bytes: bytes, filename: str, role: str, location: st
 
     save_json(ANALYSES_COLLECTION, analysis_id, analysis)
     return analysis
+
+
+SUMMARY_FIELDS = ("analysis_id", "filename", "role", "location", "overall_score", "band", "created_at")
+
+
+def list_user_analyses(user_id: str) -> list[dict]:
+    """Summary rows for every analysis this user has run, newest first.
+
+    Deliberately projection-only (SUMMARY_FIELDS, not the full record) --
+    a history list should stay cheap to render; the full payload is still
+    available one at a time via GET /api/analyze/{id}.
+
+    Also carries "parse_score" alongside SUMMARY_FIELDS -- not in the
+    originally-specified field list, but the history UI shows both the
+    ATS Parse Score and the Role Fit Score per row ("the two scores as
+    small pills"), and overall_score alone can't produce that. No new
+    computation: format_detail.score is already stored on every analysis
+    record, just rescaled from its 0-1 fraction to the 0-100 scale
+    overall_score/subscores already use.
+    """
+    summaries = []
+    for key in list_keys(ANALYSES_COLLECTION):
+        record = load_json(ANALYSES_COLLECTION, key)
+        if not record or record.get("user_id") != user_id:
+            continue
+
+        summary = {field: record.get(field) for field in SUMMARY_FIELDS}
+        format_score_fraction = (record.get("format_detail") or {}).get("score")
+        summary["parse_score"] = (
+            round(format_score_fraction * 100, 2) if isinstance(format_score_fraction, (int, float)) else None
+        )
+        summaries.append(summary)
+
+    summaries.sort(key=lambda item: item.get("created_at") or "", reverse=True)
+    return summaries

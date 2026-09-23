@@ -58,7 +58,7 @@ def test_falls_back_to_most_recent_cached_profile_when_mining_fails(monkeypatch)
     fallback = _seed_profile("some other role", "Delhi", 40)
 
     file_bytes = (FIXTURES_DIR / "demo_after.pdf").read_bytes()
-    result = asyncio.run(run_analysis(file_bytes, "demo_after.pdf", "backend developer", "Ahmedabad"))
+    result = asyncio.run(run_analysis(file_bytes, "demo_after.pdf", "backend developer", "Ahmedabad", "test-user-id"))
 
     assert result["degraded"] is True
     assert "some other role" in result["degraded_message"]
@@ -80,7 +80,7 @@ def test_no_degradation_when_mining_succeeds_normally(monkeypatch):
     monkeypatch.setattr(analyze_module, "get_or_mine", _mining_succeeded)
 
     file_bytes = (FIXTURES_DIR / "demo_after.pdf").read_bytes()
-    result = asyncio.run(run_analysis(file_bytes, "demo_after.pdf", "backend developer", "Ahmedabad"))
+    result = asyncio.run(run_analysis(file_bytes, "demo_after.pdf", "backend developer", "Ahmedabad", "test-user-id"))
 
     assert result["degraded"] is False
     assert result["degraded_message"] is None
@@ -103,4 +103,4 @@ def test_raises_role_profile_unavailable_when_nothing_is_cached_anywhere(monkeyp
     file_bytes = (FIXTURES_DIR / "demo_after.pdf").read_bytes()
 
     with pytest.raises(RoleProfileUnavailableError):
-        asyncio.run(run_analysis(file_bytes, "demo_after.pdf", "backend developer", "Ahmedabad"))
+        asyncio.run(run_analysis(file_bytes, "demo_after.pdf", "backend developer", "Ahmedabad", "test-user-id"))

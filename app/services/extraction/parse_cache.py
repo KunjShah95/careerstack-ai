@@ -17,8 +17,26 @@ from app.store import load_json, save_json
 COLLECTION = "parsed_resumes"
 
 
-def _cache_key(file_bytes: bytes) -> str:
+def resume_file_key(file_bytes: bytes) -> str:
+    """Public cache key for a resume file's bytes.
+
+    Exposed (rather than kept private) because analyze.py stamps this onto
+    the saved analysis record, which is what lets discovery.py recover the
+    full ParsedResume from an analysis_id alone -- an analysis stores only
+    scoring output, not the resume itself. See load_cached_parse.
+    """
     return hashlib.sha1(file_bytes).hexdigest()
+
+
+def load_cached_parse(key: str) -> ParsedResume | None:
+    """The cached ParsedResume for a resume_file_key, or None if this key
+    was never cached (or predates the key being recorded on analyses).
+
+    Never parses on a miss -- a miss here means the caller has to degrade,
+    not silently spend a Groq call on data it only needs opportunistically.
+    """
+    cached = load_json(COLLECTION, key)
+    return ParsedResume.model_validate(cached) if cached is not None else None
 
 
 def get_or_parse(file_bytes: bytes, resume_text: str) -> ParsedResume:
@@ -35,7 +53,7 @@ def get_or_parse(file_bytes: bytes, resume_text: str) -> ParsedResume:
     cache with scripts/prep_demo.py, DEMO_MODE off, before relying on this
     in demo mode.
     """
-    key = _cache_key(file_bytes)
+    key = resume_file_key(file_bytes)
     cached = load_json(COLLECTION, key)
 
     if cached is not None:

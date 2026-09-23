@@ -6,13 +6,22 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.services.analyze import NeedsOcrError, RoleProfileUnavailableError, run_analysis
+from app.dependencies import get_current_user
+from app.models.user import UserPublic
+from app.routers.auth import router as auth_router
+from app.routers.discovery import router as discovery_router
+from app.services.analyze import (
+    NeedsOcrError,
+    RoleProfileUnavailableError,
+    list_user_analyses,
+    run_analysis,
+)
 from app.services.extraction.text_extract import ExtractionError
 from app.store import load_json
 
@@ -61,15 +70,28 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
+app.include_router(auth_router)
+app.include_router(discovery_router)
+
+
 @app.get("/api/health")
 async def health() -> dict:
     return {"status": "ok", "demo_mode": settings.demo_mode}
 
 
+@app.get("/api/analyses")
+async def list_analyses(current_user: UserPublic = Depends(get_current_user)) -> list[dict]:
+    return list_user_analyses(current_user.user_id)
+
+
 @app.get("/api/analyze/{analysis_id}")
-async def get_analysis(analysis_id: str) -> dict:
+async def get_analysis(
+    analysis_id: str, current_user: UserPublic = Depends(get_current_user)
+) -> dict:
     analysis = load_json(ANALYSES_COLLECTION, analysis_id)
-    if analysis is None:
+    # Same 404 for "doesn't exist" and "belongs to someone else" -- a 403
+    # here would confirm the ID is real, just not yours.
+    if analysis is None or analysis.get("user_id") != current_user.user_id:
         raise HTTPException(status_code=404, detail="No analysis found with that ID.")
     return analysis
 
@@ -79,6 +101,7 @@ async def analyze(
     file: UploadFile = File(...),
     role: str = Form(...),
     location: str = Form(...),
+    current_user: UserPublic = Depends(get_current_user),
 ) -> dict:
     filename = file.filename or ""
     extension = Path(filename).suffix.lower()
@@ -104,7 +127,7 @@ async def analyze(
         raise HTTPException(status_code=400, detail="Both role and location are required.")
 
     try:
-        return await run_analysis(file_bytes, filename, role, location)
+        return await run_analysis(file_bytes, filename, role, location, current_user.user_id)
     except NeedsOcrError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ExtractionError as exc:

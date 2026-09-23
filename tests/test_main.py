@@ -5,7 +5,15 @@ Adzuna call (input validation, needs_ocr), plus the two simple GET
 routes -- consistent with the rest of this suite staying network-free.
 The full pipeline (parse_resume + get_or_mine + scoring) was verified
 manually against a real fixture; see the conversation, not this file.
+
+/api/analyze and /api/analyze/{id} require auth now -- see test_auth.py
+for the auth flow itself; here each test just registers its own throwaway
+user (a fresh, unique email per test, so tests never collide with each
+other's leftover ./data/users/ state across runs) to get past the
+Depends(get_current_user) gate.
 """
+
+import uuid
 
 import fitz
 from fastapi.testclient import TestClient
@@ -13,6 +21,15 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 client = TestClient(app)
+
+
+def _auth_headers() -> dict:
+    email = f"test-{uuid.uuid4().hex}@example.com"
+    response = client.post(
+        "/api/auth/register", json={"name": "Test User", "email": email, "password": "testpass123"}
+    )
+    assert response.status_code == 201, response.text
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
 def test_health():
@@ -24,9 +41,18 @@ def test_health():
 
 
 def test_get_missing_analysis_returns_404():
-    response = client.get("/api/analyze/does-not-exist")
+    response = client.get("/api/analyze/does-not-exist", headers=_auth_headers())
     assert response.status_code == 404
     assert "detail" in response.json()
+
+
+def test_analyze_requires_auth():
+    response = client.post(
+        "/api/analyze",
+        files={"file": ("resume.pdf", b"%PDF-1.4", "application/pdf")},
+        data={"role": "backend developer", "location": "India"},
+    )
+    assert response.status_code == 401
 
 
 def test_analyze_rejects_unsupported_extension():
@@ -34,6 +60,7 @@ def test_analyze_rejects_unsupported_extension():
         "/api/analyze",
         files={"file": ("resume.txt", b"hello", "text/plain")},
         data={"role": "backend developer", "location": "India"},
+        headers=_auth_headers(),
     )
     assert response.status_code == 400
     assert ".txt" in response.json()["detail"]
@@ -45,6 +72,7 @@ def test_analyze_rejects_oversized_file():
         "/api/analyze",
         files={"file": ("resume.pdf", oversized, "application/pdf")},
         data={"role": "backend developer", "location": "India"},
+        headers=_auth_headers(),
     )
     assert response.status_code == 400
     assert "5MB" in response.json()["detail"]
@@ -55,6 +83,7 @@ def test_analyze_rejects_blank_role_or_location():
         "/api/analyze",
         files={"file": ("resume.pdf", b"%PDF-1.4", "application/pdf")},
         data={"role": "  ", "location": "India"},
+        headers=_auth_headers(),
     )
     assert response.status_code == 400
     assert "required" in response.json()["detail"].lower()
@@ -73,6 +102,7 @@ def test_analyze_returns_422_for_a_blank_page_pdf():
         "/api/analyze",
         files={"file": ("blank.pdf", blank_pdf_bytes, "application/pdf")},
         data={"role": "backend developer", "location": "India"},
+        headers=_auth_headers(),
     )
 
     assert response.status_code == 422
