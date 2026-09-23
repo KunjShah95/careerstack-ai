@@ -32,7 +32,9 @@ async def _get(url: str, params: dict) -> httpx.Response:
         return response
 
 
-async def search(query: str, location: str, limit: int, country: str = "in") -> list[dict]:
+async def search(
+    query: str, location: str, limit: int, country: str = "in", page: int = 1
+) -> list[dict]:
     """Search Adzuna for job postings.
 
     Returns a list of dicts with id, title, company, location, description,
@@ -41,8 +43,12 @@ async def search(query: str, location: str, limit: int, country: str = "in") -> 
     than the full posting text -- that's an API limitation, not a bug here.
     `title` and `category` are never truncated, which is why miner.py scans
     them too instead of relying on description alone.
+
+    `page` is 1-based, matching Adzuna's own paging. Callers that only want
+    one page (miner.py) can ignore it; discovery.py pages through results
+    to build a larger sample.
     """
-    url = f"{BASE_URL}/{country}/search/1"
+    url = f"{BASE_URL}/{country}/search/{page}"
     params = {
         "app_id": settings.adzuna_app_id,
         "app_key": settings.adzuna_app_key,
@@ -56,7 +62,9 @@ async def search(query: str, location: str, limit: int, country: str = "in") -> 
     try:
         response = await _get(url, params)
     except httpx.HTTPError as exc:
-        logger.warning("Adzuna search failed for query=%r location=%r: %s", query, location, exc)
+        logger.warning(
+            "Adzuna search failed for query=%r location=%r page=%d: %s", query, location, page, exc
+        )
         return []
 
     try:
