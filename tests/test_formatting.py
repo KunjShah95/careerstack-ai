@@ -122,3 +122,64 @@ def test_docx_input_skips_reasonable_length_instead_of_failing_it():
     assert "reasonable_length" not in failed_checks
 
     assert result["skipped"] == [{"check": "reasonable_length", "status": "not_applicable"}]
+
+
+def test_projects_section_is_accepted_in_place_of_experience():
+    """A student/fresher resume with a Projects section but no employment
+    history should still pass has_core_sections -- but visibly, via a note
+    in result["notes"], not as an indistinguishable plain pass.
+    """
+    sections_found = ["summary", "skills", "projects", "education"]
+
+    result = format_score(CLEAN_RESUME_TEXT, CLEAN_RESUME_LAYOUT, sections_found)
+
+    failed_checks = {issue["check"] for issue in result["issues"]}
+    assert "has_core_sections" not in failed_checks
+
+    notes_by_check = {note["check"]: note["note"] for note in result["notes"]}
+    assert "has_core_sections" in notes_by_check
+    note = notes_by_check["has_core_sections"]
+    assert "Projects section was accepted" in note
+    assert "Experience" in note
+
+
+def test_missing_both_experience_and_skills_fails_and_names_both():
+    """Neither Experience nor Projects is present, and Skills is also
+    missing -- education alone must not satisfy the check, and the failure
+    message must name exactly the two sections actually missing (not a
+    static "one of these three" message), pluralised correctly.
+    """
+    sections_found = ["summary", "education"]
+
+    result = format_score(CLEAN_RESUME_TEXT, CLEAN_RESUME_LAYOUT, sections_found)
+
+    failed_checks = {issue["check"] for issue in result["issues"]}
+    assert "has_core_sections" in failed_checks
+
+    issue = next(issue for issue in result["issues"] if issue["check"] == "has_core_sections")
+    assert "Experience" in issue["message"]
+    assert "Skills" in issue["message"]
+    assert "Education" not in issue["message"]
+    assert "headings" in issue["message"]  # plural, since two sections are named
+    assert "these" in issue["message"]
+
+    # no substitution happened, so no note for this check
+    notes_by_check = {note["check"]: note["note"] for note in result["notes"]}
+    assert "has_core_sections" not in notes_by_check
+
+
+def test_missing_only_experience_names_a_single_section_singular():
+    """Only Experience is absent (no Projects substitute either) while
+    Education and Skills are both present -- the message must name just
+    that one section, singular ("heading"/"this"), not the plural phrasing
+    used when multiple sections are missing.
+    """
+    sections_found = ["summary", "skills", "education"]
+
+    result = format_score(CLEAN_RESUME_TEXT, CLEAN_RESUME_LAYOUT, sections_found)
+
+    issue = next(issue for issue in result["issues"] if issue["check"] == "has_core_sections")
+    assert issue["message"] == (
+        "No Experience section heading found — ATS parsers look for "
+        "this heading by name to structure the resume."
+    )

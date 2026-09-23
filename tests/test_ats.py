@@ -20,7 +20,9 @@ from app.services.scoring.ats import (
     _CONTACT_CHECKS,
     _FORMAT_PARSING_CHECKS,
     _SECTION_STRUCTURE_CHECKS,
+    _action_sort_key,
     _format_group,
+    _missing_skills_to_recommend,
     build_action_plan,
     compute_ats_score,
 )
@@ -169,7 +171,7 @@ def test_projected_score_is_capped_at_one_hundred():
     assert plan["projected_score_under_our_model"] <= 100.0
 
 
-def test_dimensions_have_six_named_entries_with_expected_shape():
+def test_dimensions_have_seven_named_entries_with_expected_shape():
     result = _score_demo_before(["Python", "MySQL", "HTML", "CSS"])
     dimensions = result["dimensions"]
 
@@ -178,6 +180,7 @@ def test_dimensions_have_six_named_entries_with_expected_shape():
         "Section Structure",
         "Contact & Personal Details",
         "Skills & Keywords",
+        "Technical skills coverage",
         "Evidence & Relevance",
         "Experience & Education",
     ]
@@ -207,3 +210,115 @@ def test_format_dimensions_partition_points_earned_exactly():
 
     assert total_earned == format_detail["points_earned"]
     assert total_possible == format_detail["points_possible"]
+
+
+def test_by_category_partitions_matched_and_missing_lists_exactly():
+    """The technical/professional split in keyword_detail["by_category"]
+    must be an exact partition of the flat matched/missing lists -- no
+    skill counted twice, none dropped -- and must never change the
+    composite score itself.
+    """
+    result = _score_demo_before(["Python", "MySQL", "HTML", "CSS"])
+    keyword_detail = result["keyword_detail"]
+    by_category = keyword_detail["by_category"]
+
+    assert set(by_category.keys()) == {"technical", "professional"}
+
+    for kind in ("matched", "missing"):
+        full = {item["skill"] for item in keyword_detail[kind]}
+        technical = {item["skill"] for item in by_category["technical"][kind]}
+        professional = {item["skill"] for item in by_category["professional"][kind]}
+
+        assert technical & professional == set()
+        assert technical | professional == full
+
+    for category in ("technical", "professional"):
+        assert 0.0 <= by_category[category]["coverage"] <= 1.0
+
+    # ROLE_PROFILE above is all technical skills (python, mysql, django,
+    # rest api, docker) -- confirms the professional side degrades to
+    # "nothing here" rather than erroring when a profile has no soft
+    # skills at all.
+    assert by_category["professional"]["matched"] == []
+    assert by_category["professional"]["missing"] == []
+    assert by_category["professional"]["coverage"] == 0.0
+
+
+def test_action_sort_key_prefers_technical_within_a_similar_gain_band():
+    """A missing professional (soft) skill with slightly higher raw gain
+    than a missing technical skill should still rank behind it, as long as
+    the two gains are within ACTION_GAIN_TIEBREAK_BAND of each other.
+    """
+    technical_item = {
+        "type": "missing_skill",
+        "estimated_gain": 2.6,
+        "detail": {"skill": "sql", "category": "technical"},
+    }
+    professional_item = {
+        "type": "missing_skill",
+        "estimated_gain": 2.7,
+        "detail": {"skill": "agile", "category": "professional"},
+    }
+
+    ranked = sorted([professional_item, technical_item], key=_action_sort_key, reverse=True)
+
+    assert [item["detail"]["skill"] for item in ranked] == ["sql", "agile"]
+
+
+def test_action_sort_key_still_lets_a_clearly_higher_gain_professional_skill_win():
+    """Not a hard filter: a soft skill whose gain is well outside the
+    tiebreak band still outranks a technical skill with a lower gain.
+    """
+    technical_item = {
+        "type": "missing_skill",
+        "estimated_gain": 1.0,
+        "detail": {"skill": "docker", "category": "technical"},
+    }
+    professional_item = {
+        "type": "missing_skill",
+        "estimated_gain": 4.0,
+        "detail": {"skill": "communication skills", "category": "professional"},
+    }
+
+    ranked = sorted([technical_item, professional_item], key=_action_sort_key, reverse=True)
+
+    assert [item["detail"]["skill"] for item in ranked] == ["communication skills", "docker"]
+
+
+def test_missing_skills_cascade_prefers_the_high_frequency_tier():
+    missing = [
+        {"skill": "a", "frequency": 0.20, "count": 8},
+        {"skill": "b", "frequency": 0.175, "count": 7},
+        {"skill": "c", "frequency": 0.15, "count": 6},
+        {"skill": "d", "frequency": 0.075, "count": 3},  # tied at miner.py's own floor
+        {"skill": "e", "frequency": 0.075, "count": 3},  # tied at miner.py's own floor
+    ]
+    recommended = {item["skill"] for item in _missing_skills_to_recommend(missing)}
+    assert recommended == {"a", "b", "c"}
+
+
+def test_missing_skills_cascade_falls_back_to_the_lower_tier():
+    """Fewer than 3 skills clear the preferred >=0.15 bar, so this must
+    drop to >=0.10 -- but only that far, since the lower tier itself
+    clears 3 candidates here.
+    """
+    missing = [
+        {"skill": "a", "frequency": 0.125, "count": 5},
+        {"skill": "b", "frequency": 0.125, "count": 5},
+        {"skill": "c", "frequency": 0.10, "count": 4},
+        {"skill": "d", "frequency": 0.075, "count": 3},  # below even the lower tier
+    ]
+    recommended = {item["skill"] for item in _missing_skills_to_recommend(missing)}
+    assert recommended == {"a", "b", "c"}
+
+
+def test_missing_skills_cascade_falls_back_to_everything_when_the_profile_is_thin():
+    """Neither tier clears 3 candidates -- a thin profile should still
+    surface its (low-signal) missing skills rather than recommend nothing.
+    """
+    missing = [
+        {"skill": "a", "frequency": 0.075, "count": 3},
+        {"skill": "b", "frequency": 0.075, "count": 3},
+    ]
+    recommended = {item["skill"] for item in _missing_skills_to_recommend(missing)}
+    assert recommended == {"a", "b"}

@@ -17,10 +17,28 @@ from app.services.roleprofile.adzuna import search
 
 _DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
-_SKILLS_VOCAB: list[str] = json.loads((_DATA_DIR / "skills_vocab.json").read_text(encoding="utf-8"))
+# skill -> "technical" | "professional". Was a flat list; every consumer
+# here only ever iterated it for the skill names, and iterating a dict
+# yields its keys the same way, so this swap needed no other change in
+# this file. SKILL_CATEGORIES is the public name other modules (ats.py)
+# import to categorise a skill for display, rather than re-deriving it.
+_SKILLS_VOCAB: dict[str, str] = json.loads((_DATA_DIR / "skills_vocab.json").read_text(encoding="utf-8"))
+SKILL_CATEGORIES: dict[str, str] = _SKILLS_VOCAB
 _SKILL_ALIASES: dict[str, str] = json.loads(
     (_DATA_DIR / "skill_aliases.json").read_text(encoding="utf-8")
 )
+
+DEFAULT_SKILL_CATEGORY = "technical"
+
+
+def skill_category(skill: str) -> str:
+    """"technical" or "professional" for a canonical skill name. Defaults
+    to "technical" for anything not in skills_vocab.json -- shouldn't
+    happen for a skill that came out of extract_skills_from_text (it can
+    only return canonical vocab keys), but this is display logic, not a
+    scoring input, so fail open rather than raise.
+    """
+    return _SKILLS_VOCAB.get(skill, DEFAULT_SKILL_CATEGORY)
 
 MIN_REQUIREMENT_SENTENCE_CHARS = 25
 

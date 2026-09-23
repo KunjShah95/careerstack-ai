@@ -32,7 +32,10 @@ _PHONE_MAX_DIGITS = 13
 
 TEXT_EXTRACTABLE_MIN_CHARS = 300
 
-CORE_SECTIONS = {"experience", "education", "skills"}
+# Ordered (not a set) since the failure message names sections in this
+# order, and display names for the message text.
+CORE_SECTIONS = ["experience", "education", "skills"]
+CORE_SECTION_DISPLAY_NAMES = {"experience": "Experience", "education": "Education", "skills": "Skills"}
 
 _YEAR_TOKEN_RE = re.compile(r"\b(?:19|20)\d{2}\b")
 _PRESENT_CURRENT_RE = re.compile(r"\b(?:present|current)\b", re.IGNORECASE)
@@ -74,8 +77,73 @@ def _check_text_extractable(resume_text: str, layout: dict, sections_found: list
     return len(resume_text.strip()) > TEXT_EXTRACTABLE_MIN_CHARS
 
 
+def _experience_satisfied(found: set[str]) -> bool:
+    """A student or fresher with no employment history legitimately has no
+    Experience section -- a Projects section is accepted as a substitute.
+    Education and skills get no such allowance; see _missing_core_sections.
+    """
+    return "experience" in found or "projects" in found
+
+
+def _missing_core_sections(sections_found: list[str]) -> list[str]:
+    """Which of experience/education/skills are absent, in that order --
+    "experience" here already accounts for the projects substitute.
+    """
+    found = {s.lower() for s in sections_found}
+    missing = []
+    if not _experience_satisfied(found):
+        missing.append("experience")
+    for section in ("education", "skills"):
+        if section not in found:
+            missing.append(section)
+    return missing
+
+
+def _core_sections_passed_via_projects(sections_found: list[str]) -> bool:
+    found = {s.lower() for s in sections_found}
+    return "experience" not in found and "projects" in found
+
+
 def _check_has_core_sections(resume_text: str, layout: dict, sections_found: list[str]) -> bool:
-    return CORE_SECTIONS.issubset({s.lower() for s in sections_found})
+    return not _missing_core_sections(sections_found)
+
+
+def _join_with_or(names: list[str]) -> str:
+    if len(names) == 1:
+        return names[0]
+    if len(names) == 2:
+        return f"{names[0]} or {names[1]}"
+    return f"{', '.join(names[:-1])}, or {names[-1]}"
+
+
+def _has_core_sections_message(resume_text: str, layout: dict, sections_found: list[str]) -> str:
+    """Names exactly which heading(s) are missing, correctly pluralised --
+    not a static "one of these three" message regardless of how many are
+    actually absent.
+    """
+    missing = _missing_core_sections(sections_found)
+    names = [CORE_SECTION_DISPLAY_NAMES[section] for section in missing]
+    joined = _join_with_or(names)
+    heading_word = "heading" if len(names) == 1 else "headings"
+    pronoun = "this" if len(names) == 1 else "these"
+    return (
+        f"No {joined} section {heading_word} found — ATS parsers look for "
+        f"{pronoun} {heading_word} by name to structure the resume."
+    )
+
+
+def _has_core_sections_note(resume_text: str, layout: dict, sections_found: list[str]) -> str | None:
+    """Surfaced (via format_score's "notes" list) when the check passed by
+    accepting Projects in place of Experience, so that substitution is
+    visible rather than silently folded into a plain pass.
+    """
+    if _core_sections_passed_via_projects(sections_found):
+        return (
+            "No Experience section found, but a Projects section was accepted in its "
+            "place (no employment history) — worth knowing, since not every ATS makes "
+            "the same allowance."
+        )
+    return None
 
 
 def _check_no_tables(resume_text: str, layout: dict, sections_found: list[str]) -> bool:
@@ -129,11 +197,14 @@ CHECKS: list[tuple[str, int, object, str]] = [
         "rather than real text, which most ATS software cannot read at all.",
     ),
     (
+        # A callable message, unlike every other check's static string --
+        # format_score() calls it with the same (resume_text, layout,
+        # sections_found) args to get a message naming exactly what's
+        # missing, since that varies per resume.
         "has_core_sections",
         15,
         _check_has_core_sections,
-        "Missing a standard experience, education, or skills section heading — ATS "
-        "section parsers look for these headings by name to structure the resume.",
+        _has_core_sections_message,
     ),
     (
         "no_tables",
@@ -172,6 +243,14 @@ CHECKS: list[tuple[str, int, object, str]] = [
 ]
 
 
+# Optional per-check function returning a note when a check passed via a
+# documented substitution (rather than the literal thing being present),
+# so that stays visible instead of reading as a plain, unqualified pass.
+# Only has_core_sections uses this today (the projects-for-experience
+# allowance).
+_PASS_NOTE_FNS = {"has_core_sections": _has_core_sections_note}
+
+
 def format_score(resume_text: str, layout: dict, sections_found: list[str]) -> dict:
     """Run all format compliance checks and score the result out of 100.
 
@@ -183,6 +262,7 @@ def format_score(resume_text: str, layout: dict, sections_found: list[str]) -> d
     points_possible = 0
     issues = []
     skipped = []
+    notes = []
 
     for name, points, check_fn, message in CHECKS:
         result = check_fn(resume_text, layout, sections_found)
@@ -196,8 +276,14 @@ def format_score(resume_text: str, layout: dict, sections_found: list[str]) -> d
         points_possible += points
         if result:
             points_earned += points
+            note_fn = _PASS_NOTE_FNS.get(name)
+            if note_fn:
+                note = note_fn(resume_text, layout, sections_found)
+                if note:
+                    notes.append({"check": name, "note": note})
         else:
-            issues.append({"check": name, "penalty": points, "message": message})
+            resolved_message = message(resume_text, layout, sections_found) if callable(message) else message
+            issues.append({"check": name, "penalty": points, "message": resolved_message})
 
     issues.sort(key=lambda issue: issue["penalty"], reverse=True)
 
@@ -209,4 +295,5 @@ def format_score(resume_text: str, layout: dict, sections_found: list[str]) -> d
         "points_possible": points_possible,
         "issues": issues,
         "skipped": skipped,
+        "notes": notes,
     }

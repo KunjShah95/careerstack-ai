@@ -7,11 +7,14 @@ how it gets combined with the others.
 """
 
 from app.models.resume import ParsedResume
+from app.services.roleprofile.miner import skill_category
 from app.services.scoring.experience import experience_score
 from app.services.scoring.formatting import CHECKS as FORMAT_CHECKS
 from app.services.scoring.formatting import format_score
 from app.services.scoring.keywords import keyword_score
 from app.services.scoring.semantic import semantic_score
+
+SKILL_CATEGORIES = ("technical", "professional")
 
 WEIGHTS = {"keyword": 0.40, "semantic": 0.25, "format": 0.20, "experience": 0.15}
 
@@ -20,6 +23,18 @@ DEFAULT_BAND = "Poor match"
 
 TOP_ACTION_ITEMS = 6
 WEAK_EVIDENCE_FLAT_GAIN = 2.0
+
+# miner.py's own inclusion floor for skill_frequencies is "mentioned in
+# >=3 postings" -- at a typical 40-posting sample that's 7.5%, low enough
+# that several skills routinely tie right at the floor. That's fine for
+# the frequency table itself (it's the scoring denominator; leave it
+# alone), but recommending several tied-for-lowest-signal skills in the
+# action plan reads as noise. This cascade prefers a materially-higher bar
+# for what actually gets *recommended*, without touching the table it's
+# filtering.
+MISSING_SKILL_PREFERRED_MIN_FREQUENCY = 0.15  # 6+ of 40
+MISSING_SKILL_FALLBACK_MIN_FREQUENCY = 0.10  # 4+ of 40
+MISSING_SKILL_MIN_CANDIDATES = 3  # below this many survivors, relax the bar
 
 # Points per formatting.py check, read from its own CHECKS table rather
 # than re-hardcoded here -- one source of truth for what each check is
@@ -122,6 +137,39 @@ def _contact_note(failed: set) -> str:
     return "Some contact details are missing."
 
 
+def _category_coverage(matched: list[dict], missing: list[dict]) -> float:
+    """Frequency-weighted coverage within one category alone -- the same
+    formula keyword_score uses for the overall score, just restricted to
+    matched/missing lists that have already been filtered to one category.
+    """
+    total_frequency = sum(item["frequency"] for item in matched) + sum(
+        item["frequency"] for item in missing
+    )
+    if total_frequency <= 0:
+        return 0.0
+    matched_frequency = sum(item["frequency"] for item in matched)
+    return round(matched_frequency / total_frequency, 4)
+
+
+def _categorize_keyword_detail(keyword_detail: dict) -> dict:
+    """Split keyword_detail's flat matched/missing lists into a technical
+    vs. professional (soft skill) breakdown -- presentation only. The
+    composite keyword score above is computed over all skills together and
+    is untouched by this; by_category never feeds back into scoring.
+    """
+    by_category = {category: {"matched": [], "missing": []} for category in SKILL_CATEGORIES}
+
+    for item in keyword_detail["matched"]:
+        by_category[skill_category(item["skill"])]["matched"].append(item)
+    for item in keyword_detail["missing"]:
+        by_category[skill_category(item["skill"])]["missing"].append(item)
+
+    for group in by_category.values():
+        group["coverage"] = _category_coverage(group["matched"], group["missing"])
+
+    return by_category
+
+
 def _keyword_note(score: float) -> str:
     if score >= 60:
         return "Covers most in-demand skills for this role."
@@ -138,6 +186,14 @@ def _semantic_note(score: float) -> str:
     return "Resume wording rarely matches the specific requirements sampled postings ask for."
 
 
+def _technical_coverage_note(score: float) -> str:
+    if score >= 60:
+        return "Covers most of the technical skills sampled postings ask for."
+    if score >= 40:
+        return "Covers some technical skills, with real gaps against sampled postings."
+    return "Missing several technical skills common in sampled postings."
+
+
 def _experience_note(score: float) -> str:
     if score >= 80:
         return "Experience and education comfortably meet what this market expects."
@@ -148,21 +204,25 @@ def _experience_note(score: float) -> str:
     return "Experience is well below what this market typically expects for this role."
 
 
-def _build_dimensions(subscores: dict, format_detail: dict) -> list[dict]:
-    """Six named, human-readable dimensions -- no new scoring. Three
-    decompose format_detail's existing checks into named groups; three are
-    the existing keyword/semantic/experience subscores under display names.
-    Never a third total: each dimension stands alone, out of 100.
+def _build_dimensions(subscores: dict, format_detail: dict, keyword_detail: dict) -> list[dict]:
+    """Seven named, human-readable dimensions -- no new scoring. Three
+    decompose format_detail's existing checks into named groups; one
+    decomposes keyword_detail's by_category technical figure; the
+    remaining three are the existing keyword/semantic/experience subscores
+    under display names. Never a third total: each dimension stands alone,
+    out of 100.
     """
     parsing = _format_group(format_detail, _FORMAT_PARSING_CHECKS)
     structure = _format_group(format_detail, _SECTION_STRUCTURE_CHECKS)
     contact = _format_group(format_detail, _CONTACT_CHECKS)
+    technical_coverage = round(100 * keyword_detail["by_category"]["technical"]["coverage"], 2)
 
     rows = [
         ("Format & ATS Parsing", parsing["score"], _format_parsing_note(parsing["failed"])),
         ("Section Structure", structure["score"], _section_structure_note(structure["failed"])),
         ("Contact & Personal Details", contact["score"], _contact_note(contact["failed"])),
         ("Skills & Keywords", subscores["keyword"], _keyword_note(subscores["keyword"])),
+        ("Technical skills coverage", technical_coverage, _technical_coverage_note(technical_coverage)),
         ("Evidence & Relevance", subscores["semantic"], _semantic_note(subscores["semantic"])),
         ("Experience & Education", subscores["experience"], _experience_note(subscores["experience"])),
     ]
@@ -190,6 +250,7 @@ def compute_ats_score(
     top_skills = list(skill_frequencies.keys())
 
     keyword_detail = keyword_score(skill_frequencies, resume_text, set(resume.skills))
+    keyword_detail["by_category"] = _categorize_keyword_detail(keyword_detail)
     semantic_detail = semantic_score(
         resume_text, role_profile.get("requirement_sentences", []), top_skills=top_skills
     )
@@ -217,7 +278,7 @@ def compute_ats_score(
         "band": _band(overall_score),
         "weights": dict(WEIGHTS),
         "subscores": subscores,
-        "dimensions": _build_dimensions(subscores, format_detail),
+        "dimensions": _build_dimensions(subscores, format_detail, keyword_detail),
         "keyword_detail": keyword_detail,
         "semantic_detail": semantic_detail,
         "format_detail": format_detail,
@@ -236,14 +297,38 @@ def compute_ats_score(
     }
 
 
+def _missing_skills_to_recommend(missing: list[dict]) -> list[dict]:
+    """Which missing skills are worth an action-plan item, not just a spot
+    in the frequency table. Tries the preferred bar first, falls back to a
+    lower one, and only then to no bar at all (every missing skill) if
+    even that doesn't clear MISSING_SKILL_MIN_CANDIDATES -- a thin profile
+    should still produce some recommendations rather than none.
+    """
+    preferred = [item for item in missing if item["frequency"] >= MISSING_SKILL_PREFERRED_MIN_FREQUENCY]
+    if len(preferred) >= MISSING_SKILL_MIN_CANDIDATES:
+        return preferred
+
+    fallback = [item for item in missing if item["frequency"] >= MISSING_SKILL_FALLBACK_MIN_FREQUENCY]
+    if len(fallback) >= MISSING_SKILL_MIN_CANDIDATES:
+        return fallback
+
+    return missing
+
+
 def _missing_skill_actions(ats_result: dict) -> list[dict]:
-    """One action per missing skill. estimated_gain is exact, not a rough
+    """One action per recommendable missing skill (see
+    _missing_skills_to_recommend). estimated_gain is exact, not a rough
     estimate: keyword_score's own formula is
     sum(freq_i * matched_i) / sum(freq_i), so flipping one missing skill
     to matched raises the keyword component by exactly
     freq_i / sum(freq_i), and the overall score by WEIGHTS["keyword"]
     times that, times 100. See test_ats.py for a rescoring check that this
     is actually true, not just algebraically plausible.
+
+    total_frequency is deliberately computed over *every* matched and
+    missing skill, not just the recommended subset -- it's the same
+    denominator keyword_score itself used, which is what keeps the gain
+    prediction exact. Only which skills get recommended is filtered.
     """
     keyword_detail = ats_result["keyword_detail"]
     total_frequency = sum(item["frequency"] for item in keyword_detail["matched"]) + sum(
@@ -253,7 +338,7 @@ def _missing_skill_actions(ats_result: dict) -> list[dict]:
         return []
 
     actions = []
-    for item in keyword_detail["missing"]:
+    for item in _missing_skills_to_recommend(keyword_detail["missing"]):
         gain = 100 * WEIGHTS["keyword"] * item["frequency"] / total_frequency
         actions.append(
             {
@@ -271,7 +356,12 @@ def _missing_skill_actions(ats_result: dict) -> list[dict]:
                 # that wants to show the evidence rather than re-parse it
                 # out of prose (postings_sampled itself lives on
                 # role_profile_meta, not duplicated here).
-                "detail": {"skill": item["skill"], "count": item["count"], "frequency": item["frequency"]},
+                "detail": {
+                    "skill": item["skill"],
+                    "count": item["count"],
+                    "frequency": item["frequency"],
+                    "category": skill_category(item["skill"]),
+                },
             }
         )
     return actions
@@ -316,9 +406,36 @@ def _weak_evidence_actions(ats_result: dict) -> list[dict]:
     return actions
 
 
+# Gains within this many points of each other count as "similar" for the
+# technical-before-professional tiebreak below -- a small band, not a hard
+# filter: a professional (soft) skill whose gain is genuinely higher by
+# more than this still lands in a higher band and outranks a technical one
+# normally, exactly as it would without this tiebreak at all.
+ACTION_GAIN_TIEBREAK_BAND = 0.5
+
+
+def _action_sort_key(item: dict) -> tuple:
+    """Primary: gain, bucketed into ACTION_GAIN_TIEBREAK_BAND-wide bands so
+    "similar" gains land in the same bucket. Secondary, within a bucket: a
+    missing professional (soft) skill sorts after everything else -- a
+    missing database matters more than a missing soft skill when the two
+    are otherwise about equally valuable. Format issues and weak-evidence
+    items aren't skills at all, so they're untouched by this and keep
+    their prior (pure-gain) relative order. Tertiary: exact gain, so ties
+    within a bucket+group still favour the larger number.
+    """
+    band = round(item["estimated_gain"] / ACTION_GAIN_TIEBREAK_BAND)
+    is_professional_skill = (
+        item["type"] == "missing_skill" and item["detail"]["category"] == "professional"
+    )
+    return (band, 0 if is_professional_skill else 1, item["estimated_gain"])
+
+
 def build_action_plan(ats_result: dict) -> dict:
     """Rank findings into a to-do list of at most TOP_ACTION_ITEMS items,
-    highest estimated_gain first.
+    highest estimated_gain first (see _action_sort_key for the
+    technical-before-professional tiebreak among similarly-valuable
+    items).
 
     projected_score_under_our_model is overall_score plus the sum of the
     gains actually shown in the plan, capped at 100. The name is
@@ -330,7 +447,7 @@ def build_action_plan(ats_result: dict) -> dict:
         + _format_issue_actions(ats_result)
         + _weak_evidence_actions(ats_result)
     )
-    candidates.sort(key=lambda item: item["estimated_gain"], reverse=True)
+    candidates.sort(key=_action_sort_key, reverse=True)
 
     top_candidates = candidates[:TOP_ACTION_ITEMS]
     items = [{"rank": rank, **item} for rank, item in enumerate(top_candidates, start=1)]
